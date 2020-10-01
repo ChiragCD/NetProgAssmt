@@ -29,14 +29,20 @@ typedef enum request {
     OUTPUT
 } request;
 
+typedef struct chunk {
+    int chunk_id;
+    char data[MSGSIZE];
+} chunk;
+
 typedef struct {
     request req;
     pid_t sender;
     pid_t receiver;
     int status;
     pid_t addresses[3];
-    int chunk_num;
-    char mtext[MSGSIZE];
+    char paths[2][128];
+    char error[128];
+    chunk chunk;
 } msg_body;
 
 typedef struct msg {
@@ -58,11 +64,5 @@ typedef struct storage {
 typedef struct chunk_locs {
     pid_t locations[3];
 } chunk_locs;
-
-typedef struct chunk {
-    int chunk_id;
-    char * data;
-} chunk;
-
 
 #endif

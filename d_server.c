@@ -43,7 +43,7 @@ void d_server() {
         if(recv_buf.mbody.req == COPY_CHUNK) status = copy_chunk(recv_buf);
         if(recv_buf.mbody.req == REMOVE_CHUNK) status = remove_chunk(recv_buf);
         if(recv_buf.mbody.req == COMMAND) status = command(recv_buf);
-        printf("%s\n", recv_buf.mbody.mtext);
+        printf("%s\n", recv_buf.mbody.chunk.data);
     }
 }
 

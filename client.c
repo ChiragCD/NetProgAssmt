@@ -35,9 +35,9 @@ void client() {
     send_buf.mtype = 1;
     send_buf.mbody.sender = getpid();
     for(int i = 0; i < 10; i++) {
-        for(int j = 0; j < 10; j++) send_buf.mbody.mtext[j] = msgs[i][j];
+        for(int j = 0; j < 10; j++) send_buf.mbody.chunk.data[j] = msgs[i][j];
         ssize_t temp = msgsnd(mqid, &send_buf, MSGSIZE, 0);
-        printf("%s\n", send_buf.mbody.mtext);
+        printf("%s\n", send_buf.mbody.chunk.data);
     }
 }
 
