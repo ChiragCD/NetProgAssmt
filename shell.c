@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <string.h>
+
 char* history[10];
 int statuses[10];
 void siginthandler(int status){// sig handler for sigint
