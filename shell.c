@@ -417,7 +417,8 @@ void shell(int argc, char ** argv) {
     char command_input[100];
     do{
         printf("\n> ");
-        scanf("%[^\n]%*c",command_input);
+        gets(command_input);
+        printf("%s\n", command_input);
         int pid = fork();
         if(!pid)
                 break;
@@ -431,6 +432,7 @@ void shell(int argc, char ** argv) {
         statuses[0] = ret;
         history[0] = malloc(sizeof(command_input+1));
         strcpy(history[0] , command_input);
+        strcpy(command_input , "HELLO\0");
     }while(command_input[0]!='\0');
     sigfillset(&full_set);
     if (sigprocmask(SIG_BLOCK,&full_set,NULL)==-1)   
@@ -472,4 +474,3 @@ int main (int argc, char ** argv) {
 //    execBaseCase(command_input);
 //    return 0;
 //}
-
