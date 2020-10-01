@@ -2,82 +2,17 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/wait.h>
 #include <string.h>
-char* history[10];
-int statuses[10];
-void siginthandler(int status){// sig handler for sigint
-    for(int i=0;i<10 && history[i];i++)
-       printf("Status of : %s is %d\n", history[i],statuses[i]);  
-    return;  
-}
-void sigquithandler(int status){
-        printf("Do you really want to exit?\n");
-        char ip[10];
-        fgets(ip, 10, stdin);
-        if(ip[0] == 'y' || ip[0] == 'Y')
-                exit(0);
-        return;
-}
-void removeSpaces(char* str){
-    char command_buff[100];
-    int j=0;
-    for(int i=0;str[i];i++)
-            if(str[i]!=' ')
-                    command_buff[j++] = str[i];
-    command_buff[j] = '\0';
-    strcpy(str,command_buff);
-}
-
-void run_simple(char* command){// the base case to be executed
-    char actual_cmd[100],infile[100],outfile[100];
-    infile[0] = '\0',outfile[0]='\0';
-    int j=0,k=0,l=0;
-    for(int i=0;command[i];i++){
-            if(command[i] == '<'){
-                    i++;
-                    while(command[i]!='\0' && command[i]!='>')
-                            infile[j++] = command[i++];
-                    i--;
-            }
-            if(command[i] == '>'){
-                    i++;
-                    while(command[i]!='\0' && command[i]!='<')
-                            outfile[k++] = command[i++];
-                    i--;
-            }
-            actual_cmd[l++] = command[i]; 
-    }
-    infile[j]='\0',outfile[k]='\0';actual_cmd[l]='\0';
-    removeSpaces(infile);
-    removeSpaces(outfile);
-    if(infile[0])
-        {int fd = open(infile,O_RDONLY); dup2(0,fd);}
-    if(outfile[0])
-        {int fd = open(outfile,O_WRONLY); dup2(1,fd);}
-    char* token = strtok(actual_cmd," ");
-    char cmd[100];
-    strcpy(cmd,  token);
-    char* args[20];
-    int m=1;
-    args[0] = cmd;
-    while(token!=NULL){
-        token=strtok(NULL," ");
-        args[m++] = token;
-    }
-    args[m] = NULL;
-    execvp(cmd,args);
-}
-
+#include <sys/wait.h>
 
 #define STRSIZE 200
 
 void tee (int num_pipes, int in, int out1, int out2, int out3);
 
-//void run_simple(char * command) {
-//    //perror(command);
-//    tee(1, 0, 1, 0, 0);
-//}
+void run_simple(char * command) {
+    //perror(command);
+    tee(1, 0, 1, 0, 0);
+}
 
 void read_in_file (char * command, char * in_file) {
     char * temp = in_file;
@@ -403,73 +338,17 @@ void execute (char * command) {
 }
 
 void shell(int argc, char ** argv) {
-    
-    sigset_t full_set;
-    sigfillset(&full_set);
-    sigdelset(&full_set,SIGINT);
-    sigdelset(&full_set,SIGQUIT);
-    if(sigprocmask(SIG_BLOCK,&full_set,NULL)==-1)
-            perror("sigprocmask");
-    signal(SIGINT, siginthandler);
-    signal(SIGQUIT,sigquithandler);
-    for(int i=0;i<10;i++)
-            history[i] = NULL;
-    char command_input[100];
-    do{
-        printf("\n> ");
-        scanf("%[^\n]%*c",command_input);
-        int pid = fork();
-        if(!pid)
-                break;
-        printf("Running command %s on child with pid: %d\n",command_input,pid);
-        int ret;
-        wait(&ret);
-        for(int i=9;i;i--){
-            history[i] = history[i-1];
-            statuses[i] = statuses[i-1];
-        }
-        statuses[0] = ret;
-        history[0] = malloc(sizeof(command_input+1));
-        strcpy(history[0] , command_input);
-    }while(command_input[0]!='\0');
-    sigfillset(&full_set);
-    if (sigprocmask(SIG_BLOCK,&full_set,NULL)==-1)   
-           perror("SigprocMask"); 
-    execute(command_input);
-//    while(1) {
-//        int status;
-//        
-//        execute("ls|wc|wc|wc");
-//        wait(&status);
-//        break;
-//    }
-//    return;
+    while(1) {
+        int status;
+        //accept();
+        execute("ls|wc|wc|wc");
+        wait(&status);
+        break;
+    }
+    return;
 }
 
 int main (int argc, char ** argv) {
     shell(argc, argv);
     return 0;
 }
-
-//int main (int argc, char ** argv) {
-//    sigset_t full_set;
-//    sigfillset(&full_set);
-//    sigdelset(&full_set,SIGINT);
-//    sigdelset(&full_set,SIGQUIT);
-//    if(sigprocmask(SIG_BLOCK,&fullset,NULL)==-1)
-//            perror("sigprocmask");
-//    char command_input[100];
-//    do{
-//        gets(command_input);
-//        int pid = fork();
-//        if(!fork)
-//                break;
-//        printf("Running command %s on child with pid: %d\n",command_input,pid);
-//        int ret;
-//        wait(&ret);
-//
-//    }while(command_input[0]!='\0');
-//    execBaseCase(command_input);
-//    return 0;
-//}
-
