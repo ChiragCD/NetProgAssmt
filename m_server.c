@@ -1,6 +1,12 @@
 #include "msg.h"
 
 static int mqid;
+static int chunk_counter;
+
+int name_server() {
+    chunk_counter++;
+    return chunk_counter;
+}
 
 void clear(storage * file_index) {
     for(int i = 0; i < 16; i++) file_index->heads[i] = NULL;
@@ -20,6 +26,17 @@ int add(storage * file_index, file * f) {
     f->next = file_index->heads[f->hash%16];
     file_index->heads[f->hash%16] = f;
     return 0;
+}
+
+file * get(storage * file_index, int hash) {
+    if(!check_if(file_index, hash)) return NULL;
+    file * temp = file_index->heads[hash%16];
+    while (temp)
+    {
+        if(temp->hash == hash) return temp;
+        temp = temp->next;
+    }
+    return NULL;
 }
 
 file * rem(storage * file_index, int hash) {
@@ -45,9 +62,9 @@ file * rem(storage * file_index, int hash) {
 int add_file (msg message, storage * file_index);
 int notify_existence (msg message, pid_t * d_array, int * num_d);
 int add_chunk (msg message);
-int cp (msg message);
+int cp (msg message, storage * file_index, pid_t ** chunk_index, pid_t * d_servers, int num_servers);
 int mv (msg message, storage * file_index);
-int rm (msg message);
+int rm (msg message, storage * file_index, pid_t ** chunk_index);
 int status_update (msg message);
 
 void siginthandler(int status) {
@@ -60,6 +77,8 @@ void siginthandler(int status) {
 }
 
 void m_server(int CHUNK_SIZE) {
+
+    chunk_counter = 0;
     
     char cwd[200];
     getcwd(cwd, sizeof(cwd));
@@ -75,8 +94,7 @@ void m_server(int CHUNK_SIZE) {
 
     storage file_index;
     clear(&file_index);
-    int chunk_index_size = 16;
-    chunk_locs * chunk_index = (chunk_locs *) malloc(chunk_index_size * sizeof(chunk_locs));
+    pid_t chunk_locs[MAXCHUNKS][NUMCOPIES];
 
     int num_d_servers;
     pid_t d_servers[1024];
@@ -92,9 +110,9 @@ void m_server(int CHUNK_SIZE) {
         if(recv_buf.mbody.req == ADD_FILE) status = add_file(recv_buf, &file_index);
         if(recv_buf.mbody.req == NOTIFY_EXISTENCE) status = notify_existence(recv_buf, d_servers, &num_d_servers);
         if(recv_buf.mbody.req == ADD_CHUNK) status = add_chunk(recv_buf);
-        if(recv_buf.mbody.req == CP) status = cp(recv_buf);
+        if(recv_buf.mbody.req == CP) status = cp(recv_buf, &file_index, chunk_locs, d_servers, num_d_servers);
         if(recv_buf.mbody.req == MV) status = mv(recv_buf, &file_index);
-        if(recv_buf.mbody.req == RM) status = rm(recv_buf);
+        if(recv_buf.mbody.req == RM) status = rm(recv_buf, &file_index, chunk_locs);
         if(recv_buf.mbody.req == STATUS_UPDATE) status = status_update(recv_buf);
         printf("%s\n", recv_buf.mbody.chunk.data);
     }
@@ -104,7 +122,7 @@ int add_file (msg message, storage * file_index) {
 
     msg send;
     send.mtype = message.mbody.sender;
-    send.mbody.sender = getpid();
+    send.mbody.sender = 1;
     send.mbody.req = STATUS_UPDATE;
 
     file * new = (file *) malloc(sizeof(file));
@@ -135,15 +153,61 @@ int add_chunk (msg message) {
     ;
 }
 
-int cp (msg message) {
-    ;
+int cp (msg message, storage * file_index, pid_t ** chunk_index, pid_t * d_servers, int num_servers) {
+    msg send;
+    send.mtype = message.mbody.sender;
+    send.mbody.sender = 1;
+    send.mbody.req = STATUS_UPDATE;
+
+    int hash = ftok(message.mbody.paths[0], 42);
+    int new_hash = ftok(message.mbody.paths[1], 42);
+    file * f = get(file_index, hash);
+    if(f == NULL) {
+        send.mbody.status = -1;
+        strcpy(send.mbody.error, "Copy Error - file does not exist");
+        msgsnd(mqid, &send, MSGSIZE, 0);
+        return -1;
+    }
+    if(get(file_index, new_hash)) {
+        send.mbody.status = -1;
+        strcpy(send.mbody.error, "Copy Error - file already exists at new location, no change");
+        msgsnd(mqid, &send, MSGSIZE, 0);
+        return -1;
+    }
+    file * new = (file *) malloc(sizeof(file));
+    new->hash = new_hash;
+    new->num_chunks = f->num_chunks;
+
+    send.mbody.req = COPY_CHUNK;
+    for(int i = 0; i < new->num_chunks; i++) {
+        int new_chunk = name_server();
+        new->chunk_ids[i] = new_chunk;
+        for(int j = 0; j < NUMCOPIES; j++) {
+            pid_t new_server = d_servers[rand()%num_servers];
+            chunk_index[new->chunk_ids[i]][j] = new_server;
+            send.mtype = new_server;
+            send.mbody.status = new_chunk;
+            send.mbody.addresses[0] = new_server;
+            send.mbody.chunk.chunk_id = chunk_index[f->chunk_ids[i]][j];
+            msgsnd(mqid, &send, MSGSIZE, 0);
+        }
+    }
+
+    add(file_index, new);
+
+    send.mtype = message.mbody.sender;
+    send.mbody.req = STATUS_UPDATE;
+    send.mbody.status = 0;
+    strcpy(send.mbody.error, "Success");
+    msgsnd(mqid, &send, MSGSIZE, 0);
+    return 0;
 }
 
 int mv (msg message, storage * file_index) {
 
     msg send;
     send.mtype = message.mbody.sender;
-    send.mbody.sender = getpid();
+    send.mbody.sender = 1;
     send.mbody.req = STATUS_UPDATE;
 
     int hash = ftok(message.mbody.paths[0], 42);
@@ -174,12 +238,43 @@ int mv (msg message, storage * file_index) {
     return 0;
 }
 
-int rm (msg message) {
-    ;
+int rm (msg message, storage * file_index, pid_t ** chunk_index) {
+    msg send;
+    send.mtype = message.mbody.sender;
+    send.mbody.sender = 1;
+    send.mbody.req = STATUS_UPDATE;
+
+    int hash = ftok(message.mbody.paths[0], 42);
+    file * f = rem(file_index, hash);
+    if(f == NULL) {
+        send.mbody.status = -1;
+        strcpy(send.mbody.error, "Remove Error - file does not exist");
+        msgsnd(mqid, &send, MSGSIZE, 0);
+        return -1;
+    }
+
+    send.mbody.req = REMOVE_CHUNK;
+    for(int i = 0; i < f->num_chunks; i++) {
+        int chunk = f->chunk_ids[i];
+        send.mbody.chunk.chunk_id = chunk;
+        for(int j = 0; j < NUMCOPIES; j++) {
+            pid_t server = chunk_index[chunk][j];
+            send.mtype = server;
+            msgsnd(mqid, &send, MSGSIZE, 0);
+        }
+    }
+    free(f);
+
+    send.mtype = message.mbody.sender;
+    send.mbody.status = 0;
+    strcpy(send.mbody.error, "Success");
+    msgsnd(mqid, &send, MSGSIZE, 0);
+    return 0;
 }
 
 int status_update (msg message) {
-    ;
+    printf("Received update from %d - %s\n", message.mbody.sender, message.mbody.error);
+    return 0;
 }
 
 int main(int argc, char ** argv) {

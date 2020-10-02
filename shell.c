@@ -15,7 +15,7 @@ void siginthandler(int status){// sig handler for sigint
 void sigquithandler(int status){
         printf("Do you really want to exit?\n");
         char ip[10];
-        fgets(ip, 10, stdin);
+        gets(ip, 10, stdin);
         if(ip[0] == 'y' || ip[0] == 'Y')
                 exit(0);
         return;

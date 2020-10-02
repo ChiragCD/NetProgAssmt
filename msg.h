@@ -13,6 +13,8 @@
 #include <sys/stat.h>
 
 #define MSGSIZE 1024
+#define MAXCHUNKS 1024
+#define NUMCOPIES 3
 
 typedef enum request {
     STATUS_UPDATE,
@@ -31,13 +33,12 @@ typedef enum request {
 
 typedef struct chunk {
     int chunk_id;
-    char data[MSGSIZE];
+    char data[MSGSIZE/2];
 } chunk;
 
 typedef struct {
     request req;
     pid_t sender;
-    pid_t receiver;
     int status;
     pid_t addresses[3];
     char paths[2][128];
@@ -61,8 +62,17 @@ typedef struct storage {
     file * heads[16];
 } storage;
 
-typedef struct chunk_locs {
-    pid_t locations[3];
-} chunk_locs;
+typedef struct node
+{
+    struct node * next;
+    chunk * element;
+} node;
+
+
+typedef struct chunk_map
+{
+    node * heads[16];
+} chunk_map;
+
 
 #endif
