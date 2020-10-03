@@ -29,7 +29,6 @@ int add(storage * file_index, file * f) {
 }
 
 file * get(storage * file_index, int hash) {
-    if(!check_if(file_index, hash)) return NULL;
     file * temp = file_index->heads[hash%16];
     while (temp)
     {
@@ -41,9 +40,8 @@ file * get(storage * file_index, int hash) {
 
 file * rem(storage * file_index, int hash) {
     file * temp;
-    if(!check_if(file_index, hash)) return NULL;
     file * pointer = file_index->heads[hash%16];
-    if(pointer->hash == hash) {
+    if(pointer && pointer->hash == hash) {
         temp = pointer;
         file_index->heads[hash%16] = pointer->next;
         return temp;
@@ -180,15 +178,16 @@ int cp (msg message, storage * file_index, pid_t ** chunk_index, pid_t * d_serve
 
     send.mbody.req = COPY_CHUNK;
     for(int i = 0; i < new->num_chunks; i++) {
+        int current_chunk = f->chunk_ids[i];
         int new_chunk = name_server();
         new->chunk_ids[i] = new_chunk;
         for(int j = 0; j < NUMCOPIES; j++) {
             pid_t new_server = d_servers[rand()%num_servers];
-            chunk_index[new->chunk_ids[i]][j] = new_server;
-            send.mtype = new_server;
+            chunk_index[new_chunk][j] = new_server;
+            send.mtype = chunk_index[current_chunk][j];
             send.mbody.status = new_chunk;
             send.mbody.addresses[0] = new_server;
-            send.mbody.chunk.chunk_id = chunk_index[f->chunk_ids[i]][j];
+            send.mbody.chunk.chunk_id = current_chunk;
             msgsnd(mqid, &send, MSGSIZE, 0);
         }
     }
