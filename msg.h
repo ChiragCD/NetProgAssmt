@@ -20,6 +20,7 @@ typedef enum request {
     STATUS_UPDATE,
     ADD_FILE,
     ADD_CHUNK,
+    CHUNK_DATA,
     STORE_CHUNK,
     NOTIFY_EXISTENCE,
     CP,
@@ -66,7 +67,6 @@ typedef struct node {
     struct node * next;
     chunk * element;
 } node;
-
 
 typedef struct chunk_map {
     node * heads[16];

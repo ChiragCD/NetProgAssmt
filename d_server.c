@@ -46,10 +46,11 @@ chunk * rem(chunk_map * map, int id) {
     return NULL;
 }
 
-int store_chunk (msg message);
+int store_chunk (msg message, chunk_map * map);
 int copy_chunk (msg message, chunk_map * map);
 int remove_chunk (msg message, chunk_map * map);
 int command (msg message);
+int status_update (msg message);
 
 void d_server() {
 
@@ -84,10 +85,11 @@ void d_server() {
             exit(1);
         }
         int status = 0;
-        if(recv_buf.mbody.req == STORE_CHUNK) status = store_chunk(recv_buf);
+        if(recv_buf.mbody.req == STORE_CHUNK) status = store_chunk(recv_buf, &map);
         if(recv_buf.mbody.req == COPY_CHUNK) status = copy_chunk(recv_buf, &map);
         if(recv_buf.mbody.req == REMOVE_CHUNK) status = remove_chunk(recv_buf, &map);
         if(recv_buf.mbody.req == COMMAND) status = command(recv_buf);
+        if(recv_buf.mbody.req == STATUS_UPDATE) status = status_update(recv_buf);
         printf("%s\n", recv_buf.mbody.chunk.data);
     }
 }
@@ -98,8 +100,23 @@ int main(int argc, char ** argv) {
     return 0;
 }
 
-int store_chunk (msg message) {
-    ;
+int store_chunk (msg message, chunk_map * map) {
+    int chunk_id = message.mbody.chunk.chunk_id;
+    chunk * c = (chunk *) malloc(sizeof(chunk));
+    c->chunk_id = chunk_id;
+    char * writer = c->data;
+    char * reader = message.mbody.chunk.data;
+    while(*reader && *reader != EOF) *(writer++) = *(reader++);
+    *writer = *reader;
+
+    msg send;
+    send.mtype = message.mbody.sender;
+    send.mbody.sender = getpid();
+    send.mbody.req = STATUS_UPDATE;
+    send.mbody.status = 0;
+    strcpy(send.mbody.error, "Store Success");
+    msgsnd(mqid, &send, MSGSIZE, 0);
+    return 0;
 }
 
 int copy_chunk (msg message, chunk_map * map) {
@@ -108,6 +125,7 @@ int copy_chunk (msg message, chunk_map * map) {
     pid_t new_server = message.mbody.addresses[0];
     chunk * c = get(map, chunk_id);
     if(c == NULL) return -1;
+
     msg send;
     send.mtype = new_server;
     send.mbody.sender = getpid();
@@ -131,4 +149,9 @@ int remove_chunk (msg message, chunk_map * map) {
 
 int command (msg message) {
     ;
+}
+
+int status_update (msg message) {
+    printf("Received update from %d - %s\n", message.mbody.sender, message.mbody.error);
+    return 0;
 }

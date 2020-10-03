@@ -59,7 +59,7 @@ file * rem(storage * file_index, int hash) {
 
 int add_file (msg message, storage * file_index);
 int notify_existence (msg message, pid_t * d_array, int * num_d);
-int add_chunk (msg message);
+int add_chunk (msg message, storage * file_index, pid_t ** chunk_index, pid_t * d_servers, int num_servers);
 int cp (msg message, storage * file_index, pid_t ** chunk_index, pid_t * d_servers, int num_servers);
 int mv (msg message, storage * file_index);
 int rm (msg message, storage * file_index, pid_t ** chunk_index);
@@ -107,7 +107,7 @@ void m_server(int CHUNK_SIZE) {
         int status = 0;
         if(recv_buf.mbody.req == ADD_FILE) status = add_file(recv_buf, &file_index);
         if(recv_buf.mbody.req == NOTIFY_EXISTENCE) status = notify_existence(recv_buf, d_servers, &num_d_servers);
-        if(recv_buf.mbody.req == ADD_CHUNK) status = add_chunk(recv_buf);
+        if(recv_buf.mbody.req == ADD_CHUNK) status = add_chunk(recv_buf, &file_index, chunk_locs, d_servers, num_d_servers);
         if(recv_buf.mbody.req == CP) status = cp(recv_buf, &file_index, chunk_locs, d_servers, num_d_servers);
         if(recv_buf.mbody.req == MV) status = mv(recv_buf, &file_index);
         if(recv_buf.mbody.req == RM) status = rm(recv_buf, &file_index, chunk_locs);
@@ -130,12 +130,12 @@ int add_file (msg message, storage * file_index) {
     int error = add(file_index, new);
     if(error == -1) {
         send.mbody.status = -1;
-        strcpy(send.mbody.error, "Add Error - file already exists at location");
+        strcpy(send.mbody.error, "Add file Error - file already exists at location");
         msgsnd(mqid, &send, MSGSIZE, 0);
         return -1;
     }
     send.mbody.status = 0;
-    strcpy(send.mbody.error, "Success");
+    strcpy(send.mbody.error, "Add file Success");
     msgsnd(mqid, &send, MSGSIZE, 0);
     return 0;
 }
@@ -147,8 +147,33 @@ int notify_existence (msg message, pid_t * d_array, int * num_d) {
     return 0;
 }
 
-int add_chunk (msg message) {
-    ;
+int add_chunk (msg message, storage * file_index, pid_t ** chunk_index, pid_t * d_servers, int num_servers) {
+    msg send;
+    send.mtype = message.mbody.sender;
+    send.mbody.sender = 1;
+    send.mbody.req = CHUNK_DATA;
+
+    int hash = ftok(message.mbody.paths[0], 42);
+    file * f = get(file_index, hash);
+    if(!f) {
+        send.mbody.status = -1;
+        strcpy(send.mbody.error, "Add chunk Error - file does not exist");
+        msgsnd(mqid, &send, MSGSIZE, 0);
+        return -1;
+    }
+
+    int new_chunk_id = name_server();
+    send.mbody.chunk.chunk_id = new_chunk_id;
+    send.mbody.status = 0;
+    strcpy(send.mbody.error, "Add chunk Success");
+    f->chunk_ids[f->num_chunks] = new_chunk_id;
+    (f->num_chunks)++;
+    for(int i = 0; i < NUMCOPIES; i++) {
+        chunk_index[new_chunk_id][i] = d_servers[rand()%num_servers];
+        send.mbody.addresses[i] = chunk_index[new_chunk_id][i];
+    }
+    msgsnd(mqid, &send, MSGSIZE, 0);
+    return 0;
 }
 
 int cp (msg message, storage * file_index, pid_t ** chunk_index, pid_t * d_servers, int num_servers) {
@@ -197,7 +222,7 @@ int cp (msg message, storage * file_index, pid_t ** chunk_index, pid_t * d_serve
     send.mtype = message.mbody.sender;
     send.mbody.req = STATUS_UPDATE;
     send.mbody.status = 0;
-    strcpy(send.mbody.error, "Success");
+    strcpy(send.mbody.error, "Copy Success");
     msgsnd(mqid, &send, MSGSIZE, 0);
     return 0;
 }
@@ -232,7 +257,7 @@ int mv (msg message, storage * file_index) {
         return -1;
     }
     send.mbody.status = 0;
-    strcpy(send.mbody.error, "Success");
+    strcpy(send.mbody.error, "Move Success");
     msgsnd(mqid, &send, MSGSIZE, 0);
     return 0;
 }
@@ -266,7 +291,7 @@ int rm (msg message, storage * file_index, pid_t ** chunk_index) {
 
     send.mtype = message.mbody.sender;
     send.mbody.status = 0;
-    strcpy(send.mbody.error, "Success");
+    strcpy(send.mbody.error, "Remove Success");
     msgsnd(mqid, &send, MSGSIZE, 0);
     return 0;
 }
