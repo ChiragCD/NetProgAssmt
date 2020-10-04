@@ -20,7 +20,7 @@ void client() {
     msg send_buf,recv_buf;
     ssize_t temp, msgsize;
     for(;;){
-            printf("\nEnter the type of operation you would like to perform:\nADD FILE: 1 <file path>\nADD CHUNK: 2 <file path> <machine file path> <chunk number>\nCOPY: 3 <source> <destination>\nMOVE: 4 <source> <destination>\nREMOVE: 5 <file path>\nCOMMAND: 6 <command> <d_server_pid> <chunk name>\n"");
+            printf("\nEnter the type of operation you would like to perform:\nADD FILE: 1 <file path>\nADD CHUNK: 2 <file path> <machine file path> <chunk number>\nCOPY: 3 <source> <destination>\nMOVE: 4 <source> <destination>\nREMOVE: 5 <file path>\nCOMMAND: 6 <command> <d_server_pid> <chunk name>\n");
             int choice = -1;
             choice = getc(stdin);
             choice -= '0';

@@ -62,8 +62,7 @@ void d_server() {
 }
 
 int main(int argc, char ** argv) {
-    int CHUNK_SIZE = atoi(argv[1]);
-    d_server(CHUNK_SIZE);
+    d_server();
     return 0;
 }
 

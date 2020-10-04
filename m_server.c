@@ -87,7 +87,7 @@ void siginthandler(int status) {
     exit(0);
 }
 
-void m_server(int CHUNK_SIZE) {
+void m_server() {
 
     chunk_counter = 0;
     
@@ -349,7 +349,6 @@ int status_update (msg message) {
 
 int main(int argc, char ** argv) {
     signal(SIGINT, siginthandler);
-    int CHUNK_SIZE = atoi(argv[1]);
-    m_server(CHUNK_SIZE);
+    m_server();
     return 0;
 }
