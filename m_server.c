@@ -126,7 +126,6 @@ void m_server(int CHUNK_SIZE) {
         if(recv_buf.mbody.req == MV) status = mv(recv_buf, &file_index);
         if(recv_buf.mbody.req == RM) status = rm(recv_buf, &file_index, chunk_locs);
         if(recv_buf.mbody.req == STATUS_UPDATE) status = status_update(recv_buf);
-        printf("%s\n", recv_buf.mbody.chunk.data);
     }
 }
 
@@ -167,7 +166,7 @@ int notify_existence (msg message, pid_t * d_array, int * num_d) {
 
 int add_chunk (msg message, storage * file_index, pid_t ** chunk_index, pid_t * d_servers, int num_servers) {
 
-    printf("\nStarting add chunk %d\n", d_servers[0]);
+    printf("\nStarting add chunk\n");
 
     msg send;
     send.mtype = message.mbody.sender;
@@ -237,10 +236,12 @@ int cp (msg message, storage * file_index, pid_t * chunk_index[], pid_t d_server
 
     send.mbody.req = COPY_CHUNK;
     for(int i = 0; i < new->num_chunks; i++) {
+        printf("In outer loop\n");
         int current_chunk = f->chunk_ids[i];
         int new_chunk = name_server();
         new->chunk_ids[i] = new_chunk;
         for(int j = 0; j < NUMCOPIES; j++) {
+            printf("In loop\n");
             pid_t new_server = d_servers[rand()%num_servers];
             chunk_index[new_chunk][j] = new_server;
             send.mtype = chunk_index[current_chunk][j];
@@ -251,14 +252,16 @@ int cp (msg message, storage * file_index, pid_t * chunk_index[], pid_t d_server
         }
     }
 
+    printf("Done\n");
     add(file_index, new);
 
     send.mtype = message.mbody.sender;
     send.mbody.req = STATUS_UPDATE;
     send.mbody.status = 0;
     strcpy(send.mbody.error, "Copy Success");
-    msgsnd(mqid, &send, MSGSIZE, 0);
-    printf("Copy success\n");
+    printf("Sending\n");
+    int stat = msgsnd(mqid, &send, MSGSIZE, 0);
+    printf("%d Copy success\n", stat);
     return 0;
 }
 
@@ -342,7 +345,7 @@ int rm (msg message, storage * file_index, pid_t * chunk_index[]) {
 }
 
 int status_update (msg message) {
-    printf("Received update from %d - %s\n", message.mbody.sender, message.mbody.error);
+    printf("\nReceived update from %d - %s\n", message.mbody.sender, message.mbody.error);
     return 0;
 }
 

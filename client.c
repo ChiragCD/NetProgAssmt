@@ -64,6 +64,7 @@ void client() {
                                pid_t d_pid = recv_buf.mbody.addresses[i];
                                send_buf.mtype=d_pid;
                                send_buf.mbody.chunk=c;
+                               send_buf.mbody.chunk.chunk_id = recv_buf.mbody.chunk.chunk_id;
                                send_buf.mbody.req=STORE_CHUNK;
                                ssize_t temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
                        }

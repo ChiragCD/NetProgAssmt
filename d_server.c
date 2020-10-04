@@ -10,7 +10,6 @@ int add(chunk_map * map, chunk * c) {
     node * n = (node *) malloc(sizeof(node));
     n->element = c;
     n->next = map->heads[c->chunk_id%16];
-    printf("Adding %d at %dth head\n", c->chunk_id, c->chunk_id%16);
     map->heads[c->chunk_id%16] = n;
     return 0;
 }
@@ -55,6 +54,7 @@ int status_update (msg message);
 void d_server() {
 
     pid_t pid = getpid();
+    printf("D server at %d\n", pid);
     
     char cwd[200];
     getcwd(cwd, sizeof(cwd));
@@ -90,7 +90,6 @@ void d_server() {
         if(recv_buf.mbody.req == REMOVE_CHUNK) status = remove_chunk(recv_buf, &map);
         if(recv_buf.mbody.req == COMMAND) status = command(recv_buf);
         if(recv_buf.mbody.req == STATUS_UPDATE) status = status_update(recv_buf);
-        printf("%s\n", recv_buf.mbody.chunk.data);
     }
 }
 
@@ -102,9 +101,22 @@ int main(int argc, char ** argv) {
 
 int store_chunk (msg message, chunk_map * map) {
 
-    printf("Starting store chunk\n");
+    printf("\nStarting store chunk\n");
 
     int chunk_id = message.mbody.chunk.chunk_id;
+    msg send;
+    send.mtype = message.mbody.sender;
+    send.mbody.sender = getpid();
+    send.mbody.req = STATUS_UPDATE;
+
+    if(get(map, chunk_id)) {
+        printf("Chunk already present\n");
+        send.mbody.status = -1;
+        msgsnd(mqid, &send, MSGSIZE, 0);
+        printf("Store chunk error - Chunk %d already present\n", chunk_id);
+        return -1;
+    }
+
     chunk * c = (chunk *) malloc(sizeof(chunk));
     c->chunk_id = chunk_id;
     char * writer = c->data;
@@ -112,12 +124,10 @@ int store_chunk (msg message, chunk_map * map) {
     while(*reader && *reader != EOF) *(writer++) = *(reader++);
     *writer = *reader;
 
-    msg send;
-    send.mtype = message.mbody.sender;
-    send.mbody.sender = getpid();
-    send.mbody.req = STATUS_UPDATE;
-    send.mbody.status = 0;
+    add(map, c);
+
     strcpy(send.mbody.error, "Store Success");
+    send.mbody.status = 0;
     msgsnd(mqid, &send, MSGSIZE, 0);
     printf("Stored chunk %d\n", c->chunk_id);
     return 0;
@@ -125,7 +135,7 @@ int store_chunk (msg message, chunk_map * map) {
 
 int copy_chunk (msg message, chunk_map * map) {
 
-    printf("Starting copy chunk\n");
+    printf("\nStarting copy chunk\n");
 
     int chunk_id = message.mbody.chunk.chunk_id;
     int new_chunk_id = message.mbody.status;
@@ -149,7 +159,7 @@ int copy_chunk (msg message, chunk_map * map) {
 
 int remove_chunk (msg message, chunk_map * map) {
 
-    printf("Starting remove chunk\n");
+    printf("\nStarting remove chunk\n");
 
     int chunk_id = message.mbody.chunk.chunk_id;
     chunk * c = rem(map, chunk_id);
@@ -164,6 +174,6 @@ int command (msg message) {
 }
 
 int status_update (msg message) {
-    printf("Received update from %d - %s\n", message.mbody.sender, message.mbody.error);
+    printf("\nReceived update from %d - %s\n", message.mbody.sender, message.mbody.error);
     return 0;
 }
