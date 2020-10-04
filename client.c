@@ -67,10 +67,10 @@ void client() {
 
                        temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
                        msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
-                       printf("received\n");
+                       
+                       printf("received %d %d\n", recv_buf.mbody.chunk.chunk_id, recv_buf.mbody.req==CHUNK_DATA);
                        if(recv_buf.mbody.status==-1)
-                       {printf("%d %s\n",recv_buf.mbody.status, recv_buf.mbody.error);close(fd);break;}
-                       printf("Entering loop\n");
+                       {printf("%d %s\n",recv_buf.mbody.status, recv_buf.mbody.error);close(fd);break;}\
                        for(int i=0;i<3;i++){
                                pid_t d_pid = recv_buf.mbody.addresses[i];
                                send_buf.mtype=d_pid;
@@ -78,9 +78,10 @@ void client() {
                                send_buf.mbody.chunk.chunk_id = recv_buf.mbody.chunk.chunk_id;
                                send_buf.mbody.req=STORE_CHUNK;
                                printf("Sending message to server %d\n",d_pid);
-                               ssize_t temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
+                               temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
+                               msg tempmsg;
+                               msgsize = msgrcv(mqid, &tempmsg, MSGSIZE, getpid(), 0);
                        }
-                       printf("Done\n");
                        break;
                 case 3:scanf("%s",s);
                        scanf("%s",d);
