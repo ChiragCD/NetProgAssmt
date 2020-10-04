@@ -121,8 +121,23 @@ void client() {
                        else 
                                printf("FILE REMOVED SUCCESSFULLY\n");
                        break;
-                case 6:scanf("%s",cmd);
-                       scanf("%s",s);
+                case 6:scanf("%s",cmd);// command to be executed on data server
+                       scanf("%s",d);  // d_server pid in string format 
+                       scanf("%s",s);  // chunk id taken in string format
+                       send_buf.mtype = atoi(d);
+                       send_buf.mbody.req = COMMAND;
+                       send_buf.mbody.sender = getpid();
+                       strcpy(send_buf.mbody.paths[0],s);
+                       strcpy(send_buf.mbody.paths[1],cmd);
+                       temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
+                       msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
+                       if(recv_buf.mbody.status==-1)
+                               printf("%s\n",recv_buf.mbody.error);
+                       else{
+                               printf("EXECUTED COMMAND SUCCESSFULLY\n");
+                               printf("%s\n",recv_buf.mbody.error);
+                       }
+                       break;
                 getchar();
                        send_buf.mtype=1;
                        send_buf.mbody.req = COMMAND;
