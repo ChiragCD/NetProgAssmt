@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <fcntl.h>
+#include <fcntl.h> 
 #include <sys/wait.h>
 #include <string.h>
 
@@ -9,13 +9,14 @@ char* history[10];
 int statuses[10];
 void siginthandler(int status){// sig handler for sigint
     for(int i=0;i<10 && history[i];i++)
-       printf("Status of : %s is %d\n", history[i],statuses[i]);  
+       fprintf(stderr,"Status of : %s is %d\n", history[i],statuses[i]);  
     return;  
 }
 void sigquithandler(int status){
-        printf("Do you really want to exit?\n");
+        fprintf(stderr,"Do you really want to exit(y/n)?\n");
         char ip[10];
-        gets(ip, 10, stdin);
+        gets(ip);
+        //printf("character read was: %c\n",ip);
         if(ip[0] == 'y' || ip[0] == 'Y')
                 exit(0);
         return;
@@ -29,7 +30,16 @@ void removeSpaces(char* str){
     command_buff[j] = '\0';
     strcpy(str,command_buff);
 }
-
+int exists(const char *fname)
+{
+    FILE *file;
+    if ((file = fopen(fname, "r")))
+    {
+        fclose(file);
+        return 1;
+    }
+    return 0;
+}
 void run_simple(char* command){// the base case to be executed
     char actual_cmd[100],infile[100],outfile[100];
     infile[0] = '\0',outfile[0]='\0';
@@ -67,7 +77,31 @@ void run_simple(char* command){// the base case to be executed
         args[m++] = token;
     }
     args[m] = NULL;
-    execvp(cmd,args);
+    char *p= getenv("PATH");
+    token = strtok(p,":");
+    while(token !=NULL){
+       char fname[100];
+       strcpy(fname,token);
+       strcat(fname,"/");
+       strcat(fname,cmd);
+       if( exists(fname) ) {
+               fprintf(stderr,"executing %s.\n",fname);
+               execv(fname,args);
+           } 
+       token = strtok(NULL,":");
+    }
+    fprintf(stderr,"Could not find any matching command, checking cwd.\n");
+    token = getenv("PWD");
+    char fname[100];
+    strcpy(fname,token);
+    strcat(fname,"/");
+    strcat(fname,cmd);
+    if( exists(fname) ) {
+            fprintf(stderr,"executing %s.\n",fname);
+            execv(fname,args);
+        } 
+    fprintf(stderr,"Couldn't find command anywhere.\n"); 
+    //execvp(cmd,args);
 }
 
 
@@ -419,11 +453,10 @@ void shell(int argc, char ** argv) {
     do{
         printf("\n> ");
         gets(command_input);
-        printf("%s\n", command_input);
         int pid = fork();
         if(!pid)
                 break;
-        printf("Running command %s on child with pid: %d\n",command_input,pid);
+        fprintf(stderr,"Running command %s on child with pid: %d\n",command_input,pid);
         int ret;
         wait(&ret);
         for(int i=9;i;i--){
