@@ -77,6 +77,11 @@ void d_server() {
     send_buf.mbody.req = NOTIFY_EXISTENCE;
     msgsnd(mqid, &send_buf, MSGSIZE, 0);
 
+    char dir_name[10];
+    dir_name[0] = 'D';
+    sprintf(dir_name, "%d", pid);
+    mkdir(dir_name, 0777);
+
     for(;;) {
         ssize_t msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, pid, 0);
         if(msgsize == -1) {
