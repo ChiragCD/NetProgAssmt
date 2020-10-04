@@ -155,20 +155,23 @@ int copy_chunk (msg message, chunk_map * map) {
     int new_chunk_id = message.mbody.status;
     printf("%d to %d\n", chunk_id, new_chunk_id);
     pid_t new_server = message.mbody.addresses[0];
-    chunk * c = get(map, chunk_id);
-    if(c == NULL) return -1;
+
+    char buffer[100];
+    get_file_name(chunk_id, buffer);
+    int fd = open(buffer, O_RDONLY, 0777);
+    if(fd == -1) return -1;
 
     msg send;
     send.mtype = new_server;
     send.mbody.sender = getpid();
     send.mbody.req = STORE_CHUNK;
     send.mbody.chunk.chunk_id = new_chunk_id;
-    char * reader = c->data;
-    char * writer = send.mbody.chunk.data;
-    while(*reader && *reader != EOF) *(writer++) = *(reader++);
-    printf("Loop complete\n");
-    *writer = *reader;
+    int num_read;
+    num_read = read(fd,send.mbody.chunk.data,MSGSIZE/2);
+    close(fd);
+    send.mbody.chunk.data[num_read] = '\0';
     msgsnd(mqid, &send, MSGSIZE, 0);
+    msgrcv(mqid, &send, MSGSIZE/2, getpid(), 0);
     printf("Copy complete\n");
     return 0;
 }
