@@ -53,7 +53,7 @@ void client() {
                        }
                        chunk c;
                        lseek(fd,MSGSIZE*7/8*chunk_num,SEEK_SET);
-                       if(read(fd,c.data,MSGSIZE*7/8) == 0 )
+                       if(read(fd,c.data,MSGSIZE/2) == 0 )
                        {printf("Chunk number too large, file is not that big\n");close(fd);break;}
 
                        temp = msgsnd(mqid,&send_buf,MSGSIZE,0);

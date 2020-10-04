@@ -1,6 +1,16 @@
 #include "msg.h"
 
 static int mqid;
+static char dir_name[10];
+
+void get_file_name(int chunk_id, char * buffer) {
+    strcpy(buffer, dir_name);
+    buffer += strlen(buffer);
+    strcpy(buffer, "/chunk");
+    sprintf(buffer+6, "%d", chunk_id);
+    buffer += strlen(buffer);
+    strcpy(buffer, ".txt");
+}
 
 void clear (chunk_map * map) {
     for(int i = 0; i < 16; i++) map->heads[i] = NULL;
@@ -77,7 +87,6 @@ void d_server() {
     send_buf.mbody.req = NOTIFY_EXISTENCE;
     msgsnd(mqid, &send_buf, MSGSIZE, 0);
 
-    char dir_name[10];
     dir_name[0] = 'D';
     sprintf(dir_name, "%d", pid);
     mkdir(dir_name, 0777);
@@ -106,7 +115,7 @@ int main(int argc, char ** argv) {
 
 int store_chunk (msg message, chunk_map * map) {
 
-    printf("\nStarting store chunk\n");
+    printf("\nStarting store chunk %s\n", message.mbody.chunk.data);
 
     int chunk_id = message.mbody.chunk.chunk_id;
     msg send;
@@ -114,7 +123,10 @@ int store_chunk (msg message, chunk_map * map) {
     send.mbody.sender = getpid();
     send.mbody.req = STATUS_UPDATE;
 
-    if(get(map, chunk_id)) {
+    char buffer[100];
+    get_file_name(chunk_id, buffer);
+    int fd = open(buffer, O_CREAT|O_EXCL|O_RDWR, 0777);
+    if(fd == -1) {
         send.mbody.status = -1;
         strcpy(send.mbody.error, "Chunk already present\n");
         msgsnd(mqid, &send, MSGSIZE, 0);
@@ -124,17 +136,14 @@ int store_chunk (msg message, chunk_map * map) {
 
     chunk * c = (chunk *) malloc(sizeof(chunk));
     c->chunk_id = chunk_id;
-    char * writer = c->data;
-    char * reader = message.mbody.chunk.data;
-    while(*reader && *reader != EOF) *(writer++) = *(reader++);
-    *writer = *reader;
-
-    add(map, c);
+    write(fd, message.mbody.chunk.data, MSGSIZE/2);
 
     strcpy(send.mbody.error, "Store Success");
     send.mbody.status = 0;
     msgsnd(mqid, &send, MSGSIZE, 0);
     printf("Stored chunk %d\n", c->chunk_id);
+
+    close(fd);
     return 0;
 }
 
