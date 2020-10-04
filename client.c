@@ -23,14 +23,12 @@ void client() {
             printf("\nEnter the type of operation you would like to perform:\nADD FILE: 1 <file path>\nADD CHUNK: 2 <file path> <machine file path> <chunk number>\nCOPY: 3 <source> <destination>\nMOVE: 4 <source> <destination>\nREMOVE: 5 <file path>\nCOMMAND: 6 <command> <chunk name>\n");
             int choice = -1;
             choice = getc(stdin);
-            printf("%d\n", choice);
             choice -= '0';
             char cmd[100],s[100],d[100],fp[100];
             int chunk_num;
             switch(choice){
                 case 1:scanf("%s",s); // take in input the desired location in M.
                 getchar();
-                       printf("TAKEN:%s\n",s);
                        send_buf.mtype=1;
                        send_buf.mbody.req = ADD_FILE;
                        send_buf.mbody.sender = getpid();
@@ -46,7 +44,6 @@ void client() {
                        scanf("%s",fp); // get the local file path inside client file-directory
                        scanf("%d",&chunk_num);
                 getchar();
-                       printf("TAKEN:%s\n",s);
                        send_buf.mtype=1;
                        send_buf.mbody.req = ADD_CHUNK;
                        send_buf.mbody.sender = getpid();
@@ -63,12 +60,10 @@ void client() {
                        {printf("Chunk number too large, file is not that big\n");close(fd);break;}
                        close(fd);
                        c.data[num_read] = '\0';
-                       printf("Data %s\n", c.data);
 
                        temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
                        msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
                        
-                       printf("received %d %d\n", recv_buf.mbody.chunk.chunk_id, recv_buf.mbody.req==CHUNK_DATA);
                        if(recv_buf.mbody.status==-1)
                        {printf("%d %s\n",recv_buf.mbody.status, recv_buf.mbody.error);close(fd);break;}\
                        for(int i=0;i<3;i++){

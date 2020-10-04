@@ -69,7 +69,7 @@ int main(int argc, char ** argv) {
 
 int store_chunk (msg message) {
 
-    printf("\nStarting store chunk %s\n", message.mbody.chunk.data);
+    printf("\nStarting store chunk\n");
 
     int chunk_id = message.mbody.chunk.chunk_id;
     msg send;
