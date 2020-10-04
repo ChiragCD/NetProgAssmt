@@ -73,5 +73,4 @@ typedef struct chunk_map {
     node * heads[16];
 } chunk_map;
 
-
 #endif
