@@ -30,6 +30,7 @@ void client() {
             switch(choice){
                 case 1:scanf("%s",s); // take in input the desired location in M.
                 getchar();
+                       printf("TAKEN:%s\n",s);
                        send_buf.mtype=1;
                        send_buf.mbody.req = ADD_FILE;
                        send_buf.mbody.sender = getpid();
@@ -45,20 +46,23 @@ void client() {
                        scanf("%s",fp); // get the local file path inside client file-directory
                        scanf("%d",&chunk_num);
                 getchar();
+                       printf("TAKEN:%s\n",s);
                        send_buf.mtype=1;
                        send_buf.mbody.req = ADD_CHUNK;
                        send_buf.mbody.sender = getpid();
                        strcpy(send_buf.mbody.paths[0],s);
                        int fd;
-                       if(fd = open(fp,O_RDONLY) == -1){
+                       if((fd = open(fp,O_RDONLY)) == -1){
                                printf("Could not find file with name %s.\n",fp);
                                break;
                        }
                        chunk c;
                        lseek(fd,MSGSIZE/2*chunk_num,SEEK_SET);
-                       if(read(fd,c.data,MSGSIZE/2) == 0 )
+                       int num_read;
+                       if((num_read = read(fd,c.data,MSGSIZE/2)) == 0 )
                        {printf("Chunk number too large, file is not that big\n");close(fd);break;}
                        close(fd);
+                       c.data[num_read] = '\0';
                        printf("Data %s\n", c.data);
 
                        temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
@@ -73,6 +77,7 @@ void client() {
                                send_buf.mbody.chunk=c;
                                send_buf.mbody.chunk.chunk_id = recv_buf.mbody.chunk.chunk_id;
                                send_buf.mbody.req=STORE_CHUNK;
+                               printf("Sending message to server %d\n",d_pid);
                                ssize_t temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
                        }
                        printf("Done\n");
