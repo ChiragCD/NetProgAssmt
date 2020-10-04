@@ -30,13 +30,14 @@ void client() {
             choice = getchar();
             choice -= '0';
             char cmd[100],s[100],d[100],fp[100];
+            int chunk_num;
             switch(choice){
                 case 1:scanf("%s",s); // take in input the desired location in M.
-                       snd_buf.mtype=1;
-                       snd_buf.mbody.req = ADD_FILE;
-                       snd_buf.mbody.sender = getpid();
-                       strcpy(snd_buf.mbody.paths[0],s);
-                       ssize_t temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
+                       send_buf.mtype=1;
+                       send_buf.mbody.req = ADD_FILE;
+                       send_buf.mbody.sender = getpid();
+                       strcpy(send_buf.mbody.paths[0],s);
+                       ssize_t temp = msgsend(mqid,&send_buf,MSGSIZE,0);
                        ssize_t msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
                        if(recv_buf.mbody.error==-1)
                                printf("%s\n",recv_buf.mbody.error);
@@ -45,30 +46,40 @@ void client() {
                        break;
                 case 2:scanf("%s",s); 
                        scanf("%s",fp); // get the local file path inside client file-directory
-                       snd_buf.mtype=1;
-                       snd_buf.mbody.req = ADD_CHUNK;
-                       snd_buf.mbody.sender = getpid();
-                       strcpy(snd_buf.mbody.paths[0],s);
+                       scanf("%d",&chunk_num);
+                       send_buf.mtype=1;
+                       send_buf.mbody.req = ADD_CHUNK;
+                       send_buf.mbody.sender = getpid();
+                       strcpy(send_buf.mbody.paths[0],s);
                        int fd;
                        if(fd = open(fp,O_RDONLY) == -1){
                                printf("Could not find file with name %s.\n",fp);
-                               close(fd);
+                               break;
                        }
+                       chunk c;
+                       lseek(fd,MSGSIZE*7/8*chunk_num,SEEK_SET);
+                       if(read(fd,c.data,MSGSIZE*7/8) == 0 )
+                       {printf("Chunk number too large, file is not that big\n");close(fd);break;}
+
                        ssize_t temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
                        ssize_t msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
                        if(recv_buf.mbody.error==-1)
-                               printf("%s\n",recv_buf.mbody.error);
-                       else 
-                               printf("FILE ADDED SUCCESSFULLY\n");
-                       break;
+                       {printf("%s\n",recv_buf.mbody.error);close(fd);break;}
+                       for(int i=0;i<3;i++){
+                               pid_t d_pid = recv_buf.addresses[i];
+                               send_buf.mtype=d_pid;
+                               send_buf.chunk=c;
+                               send_buf.req=STORE_CHUNK;
+                               ssize_t temp = msgsend(mqid,&send_buf,MSGSIZE,0);
+                       }
                        break;
                 case 3:scanf("%s",s);
                        scanf("%s",d);
-                       snd_buf.mtype=1;
-                       snd_buf.mbody.req = CP;
-                       snd_buf.mbody.sender = getpid();
-                       strcpy(snd_buf.mbody.paths[0],s);
-                       strcpy(snd_buf.mbody.paths[1],d);
+                       send_buf.mtype=1;
+                       send_buf.mbody.req = CP;
+                       send_buf.mbody.sender = getpid();
+                       strcpy(send_buf.mbody.paths[0],s);
+                       strcpy(send_buf.mbody.paths[1],d);
                        ssize_t temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
                        ssize_t msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
                        if(recv_buf.mbody.error==-1)
@@ -78,11 +89,11 @@ void client() {
                        break;
                 case 4:scanf("%s",s);
                        scanf("%s",d);
-                       snd_buf.mtype=1;
-                       snd_buf.mbody.req = MV;
-                       snd_buf.mbody.sender = getpid();
-                       strcpy(snd_buf.mbody.paths[0],s);
-                       strcpy(snd_buf.mbody.paths[1],d);
+                       send_buf.mtype=1;
+                       send_buf.mbody.req = MV;
+                       send_buf.mbody.sender = getpid();
+                       strcpy(send_buf.mbody.paths[0],s);
+                       strcpy(send_buf.mbody.paths[1],d);
                        ssize_t temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
                        ssize_t msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
                        if(recv_buf.mbody.error==-1)
@@ -91,10 +102,10 @@ void client() {
                                printf("FILE MOVED SUCCESSFULLY\n");
                        break;
                 case 5:scanf("%s",s); // take in input the desired location in M.
-                       snd_buf.mtype=1;
-                       snd_buf.mbody.req = RM;
-                       snd_buf.mbody.sender = getpid();
-                       strcpy(snd_buf.mbody.paths[0],s);
+                       send_buf.mtype=1;
+                       send_buf.mbody.req = RM;
+                       send_buf.mbody.sender = getpid();
+                       strcpy(send_buf.mbody.paths[0],s);
                        ssize_t temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
                        ssize_t msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
                        if(recv_buf.mbody.error==-1)
@@ -104,10 +115,10 @@ void client() {
                        break;
                 case 6:scanf("%s",cmd);
                        scanf("%s",s);
-                       snd_buf.mtype=1;
-                       snd_buf.mbody.req = COMMAND;
-                       snd_buf.mbody.sender = getpid();
-                       strcpy(snd_buf.mbody.paths[0],s);
+                       send_buf.mtype=1;
+                       send_buf.mbody.req = COMMAND;
+                       send_buf.mbody.sender = getpid();
+                       strcpy(send_buf.mbody.paths[0],s);
                        ssize_t temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
                        ssize_t msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
                        if(recv_buf.mbody.error==-1)
