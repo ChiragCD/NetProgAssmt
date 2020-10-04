@@ -175,7 +175,53 @@ int remove_chunk (msg message, chunk_map * map) {
 }
 
 int command (msg message) {
-    ;
+    msg send_buf;
+    send_buf.mtype = message.mbody.sender;
+    send_buf.mbody.sender = getpid();
+    char fname[100];
+    strcpy(fname,dir_name);
+    strcat(fname,"/chunk");
+    strcat(fname,message.mbody.paths[0]);
+    strcat(fname,".txt");
+    printf("Attempting to open %s\n",fname);
+    int fd;
+    if((fd = open(fname,O_RDONLY)) == -1){
+        send_buf.mbody.status=-1;
+        strcpy(send_buf.mbody.error,"COULDN'T OPEN FILE INSIDE D SERVER\n");
+        msgsnd(mqid,&send_buf,MSGSIZE,0);
+        printf("COULDN'T OPEN\n");
+        return -1;
+    }
+    char actual_cmd[100];
+    strcpy(actual_cmd,message.mbody.paths[1]);
+    char* token = strtok(actual_cmd," ");
+    char cmd[100];
+    strcpy(cmd,  token);
+    char* args[20];
+    int m=1;
+    args[0] = cmd;
+    while(token!=NULL){
+        token=strtok(NULL," ");
+        args[m++] = token;
+    }
+    args[m] = NULL;
+    int arr[2];
+    pipe(arr);
+    printf("About to execute %s on %s\n",cmd,fname);
+    if(fork()){// parent
+    close(arr[1]); // close write end
+    send_buf.mbody.req = OUTPUT;
+    //fscanf(arr[0],"%s",send_buf.mbody.error);
+    int n = read(arr[0],send_buf.mbody.error,100);
+    send_buf.mbody.error[n] = '\0';
+    printf("Successfully execd, output is:  %s .\n",send_buf.mbody.error);
+    msgsnd(mqid,&send_buf,MSGSIZE,0);
+    return 0;
+    }
+    dup2(1,arr[1]); //duplicate write end for child
+    close(arr[0]);  //close the read end for child
+    dup2(0,fd);
+    execvp(cmd,args);
 }
 
 int status_update (msg message) {
