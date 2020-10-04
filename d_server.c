@@ -153,13 +153,15 @@ int copy_chunk (msg message, chunk_map * map) {
 
     int chunk_id = message.mbody.chunk.chunk_id;
     int new_chunk_id = message.mbody.status;
-    printf("%d to %d\n", chunk_id, new_chunk_id);
     pid_t new_server = message.mbody.addresses[0];
 
     char buffer[100];
     get_file_name(chunk_id, buffer);
     int fd = open(buffer, O_RDONLY, 0777);
-    if(fd == -1) return -1;
+    if(fd == -1) {
+        printf("Not found\n");
+        return -1;
+    }
 
     msg send;
     send.mtype = new_server;
@@ -181,12 +183,14 @@ int remove_chunk (msg message, chunk_map * map) {
     printf("\nStarting remove chunk\n");
 
     int chunk_id = message.mbody.chunk.chunk_id;
-    chunk * c = rem(map, chunk_id);
-    if(c == NULL) {
+    char buffer[100];
+    get_file_name(chunk_id, buffer);
+    int fd = open(buffer, O_RDONLY, 0777);
+    if(fd == -1) {
         printf("Chunk not present\n");
         return -1;
     }
-    free(c);
+    remove(buffer);
     printf("Successfully removed %d\n", chunk_id);
     return 0;
 }
