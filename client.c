@@ -18,14 +18,9 @@ void client() {
     key_t key = ftok(cwd, 42);
     mqid = msgget(key, S_IWUSR | S_IRUSR);
     msg send_buf,recv_buf;
+    ssize_t temp, msgsize;
     for(;;){
-            printf("Enter the type of operation you would like to perform:\n
-                            1. ADD FILE <file path>\n
-                            2. ADD CHUNK <file path> <machine file path> <chunk number>\n
-                            3. COPY <source> <destination>\n
-                            4. MOVE <source> <destination>\n
-                            5. REMOVE <file path>\n
-                            6. COMMAND <command> <chunk name>\n");
+            printf("Enter the type of operation you would like to perform:\n1. ADD FILE <file path>\n2. ADD CHUNK <file path> <machine file path> <chunk number>\n3. COPY <source> <destination>\n4. MOVE <source> <destination>\n5. REMOVE <file path>\n6. COMMAND <command> <chunk name>\n");
             int choice;
             choice = getchar();
             choice -= '0';
@@ -37,9 +32,9 @@ void client() {
                        send_buf.mbody.req = ADD_FILE;
                        send_buf.mbody.sender = getpid();
                        strcpy(send_buf.mbody.paths[0],s);
-                       ssize_t temp = msgsend(mqid,&send_buf,MSGSIZE,0);
-                       ssize_t msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
-                       if(recv_buf.mbody.error==-1)
+                       temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
+                       msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
+                       if(recv_buf.mbody.status==-1)
                                printf("%s\n",recv_buf.mbody.error);
                        else 
                                printf("FILE ADDED SUCCESSFULLY\n");
@@ -61,16 +56,16 @@ void client() {
                        if(read(fd,c.data,MSGSIZE*7/8) == 0 )
                        {printf("Chunk number too large, file is not that big\n");close(fd);break;}
 
-                       ssize_t temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
-                       ssize_t msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
-                       if(recv_buf.mbody.error==-1)
+                       temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
+                       msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
+                       if(recv_buf.mbody.status==-1)
                        {printf("%s\n",recv_buf.mbody.error);close(fd);break;}
                        for(int i=0;i<3;i++){
-                               pid_t d_pid = recv_buf.addresses[i];
+                               pid_t d_pid = recv_buf.mbody.addresses[i];
                                send_buf.mtype=d_pid;
-                               send_buf.chunk=c;
-                               send_buf.req=STORE_CHUNK;
-                               ssize_t temp = msgsend(mqid,&send_buf,MSGSIZE,0);
+                               send_buf.mbody.chunk=c;
+                               send_buf.mbody.req=STORE_CHUNK;
+                               ssize_t temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
                        }
                        break;
                 case 3:scanf("%s",s);
@@ -80,9 +75,9 @@ void client() {
                        send_buf.mbody.sender = getpid();
                        strcpy(send_buf.mbody.paths[0],s);
                        strcpy(send_buf.mbody.paths[1],d);
-                       ssize_t temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
-                       ssize_t msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
-                       if(recv_buf.mbody.error==-1)
+                       temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
+                       msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
+                       if(recv_buf.mbody.status==-1)
                                printf("%s\n",recv_buf.mbody.error);
                        else 
                                printf("FILE COPIED SUCCESSFULLY\n");
@@ -94,9 +89,9 @@ void client() {
                        send_buf.mbody.sender = getpid();
                        strcpy(send_buf.mbody.paths[0],s);
                        strcpy(send_buf.mbody.paths[1],d);
-                       ssize_t temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
-                       ssize_t msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
-                       if(recv_buf.mbody.error==-1)
+                       temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
+                       msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
+                       if(recv_buf.mbody.status==-1)
                                printf("%s\n",recv_buf.mbody.error);
                        else 
                                printf("FILE MOVED SUCCESSFULLY\n");
@@ -106,9 +101,9 @@ void client() {
                        send_buf.mbody.req = RM;
                        send_buf.mbody.sender = getpid();
                        strcpy(send_buf.mbody.paths[0],s);
-                       ssize_t temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
-                       ssize_t msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
-                       if(recv_buf.mbody.error==-1)
+                       temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
+                       msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
+                       if(recv_buf.mbody.status==-1)
                                printf("%s\n",recv_buf.mbody.error);
                        else 
                                printf("FILE REMOVED SUCCESSFULLY\n");
@@ -119,9 +114,9 @@ void client() {
                        send_buf.mbody.req = COMMAND;
                        send_buf.mbody.sender = getpid();
                        strcpy(send_buf.mbody.paths[0],s);
-                       ssize_t temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
-                       ssize_t msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
-                       if(recv_buf.mbody.error==-1)
+                       temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
+                       msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
+                       if(recv_buf.mbody.status==-1)
                                printf("%s\n",recv_buf.mbody.error);
                        else 
                                printf("FILE ADDED SUCCESSFULLY\n");
@@ -130,6 +125,8 @@ void client() {
 
 
             }
+    }
+}
 
 int main(int argc, char ** argv) {
     client();

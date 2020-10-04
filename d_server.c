@@ -10,14 +10,14 @@ int add(chunk_map * map, chunk * c) {
     node * n = (node *) malloc(sizeof(node));
     n->element = c;
     n->next = map->heads[c->chunk_id%16];
+    printf("Adding %d at %dth head\n", c->chunk_id, c->chunk_id%16);
     map->heads[c->chunk_id%16] = n;
     return 0;
 }
 
 chunk * get(chunk_map * map, int id) {
     node * temp = map->heads[id%16];
-    while (temp)
-    {
+    while (temp) {
         if(temp->element->chunk_id == id) return temp->element;
         temp = temp->next;
     }
@@ -25,9 +25,9 @@ chunk * get(chunk_map * map, int id) {
 }
 
 chunk * rem(chunk_map * map, int id) {
-    node * temp;
     node * pointer = map->heads[id%16];
-    if(pointer && pointer->element->chunk_id == id) {
+    if(!pointer) return NULL;
+    if(pointer->element->chunk_id == id) {
         chunk * temp = pointer->element;
         map->heads[id%16] = pointer->next;
         free(pointer);
@@ -101,6 +101,9 @@ int main(int argc, char ** argv) {
 }
 
 int store_chunk (msg message, chunk_map * map) {
+
+    printf("Starting store chunk\n");
+
     int chunk_id = message.mbody.chunk.chunk_id;
     chunk * c = (chunk *) malloc(sizeof(chunk));
     c->chunk_id = chunk_id;
@@ -116,10 +119,14 @@ int store_chunk (msg message, chunk_map * map) {
     send.mbody.status = 0;
     strcpy(send.mbody.error, "Store Success");
     msgsnd(mqid, &send, MSGSIZE, 0);
+    printf("Stored chunk %d\n", c->chunk_id);
     return 0;
 }
 
 int copy_chunk (msg message, chunk_map * map) {
+
+    printf("Starting copy chunk\n");
+
     int chunk_id = message.mbody.chunk.chunk_id;
     int new_chunk_id = message.mbody.status;
     pid_t new_server = message.mbody.addresses[0];
@@ -136,14 +143,19 @@ int copy_chunk (msg message, chunk_map * map) {
     while(*reader && *reader != EOF) *(writer++) = *(reader++);
     *writer = *reader;
     msgsnd(mqid, &send, MSGSIZE, 0);
+    printf("Copy complete\n");
     return 0;
 }
 
 int remove_chunk (msg message, chunk_map * map) {
+
+    printf("Starting remove chunk\n");
+
     int chunk_id = message.mbody.chunk.chunk_id;
     chunk * c = rem(map, chunk_id);
     if(c == NULL) return -1;
     free(c);
+    printf("Successfully removed %d\n", chunk_id);
     return 0;
 }
 
