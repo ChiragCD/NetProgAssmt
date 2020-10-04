@@ -13,7 +13,7 @@
 
 #include <sys/stat.h>
 
-#define MSGSIZE 4096
+#define MSGSIZE 1024
 #define MAXCHUNKS 1024
 #define NUMCOPIES 3
 
@@ -35,7 +35,7 @@ typedef enum request {
 
 typedef struct chunk {
     int chunk_id;
-    char data[MSGSIZE*7/8];
+    char data[MSGSIZE/2];
 } chunk;
 
 typedef struct {

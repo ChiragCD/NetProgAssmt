@@ -241,7 +241,6 @@ int cp (msg message, storage * file_index, pid_t * chunk_index[], pid_t d_server
         int new_chunk = name_server();
         new->chunk_ids[i] = new_chunk;
         for(int j = 0; j < NUMCOPIES; j++) {
-            printf("In loop\n");
             pid_t new_server = d_servers[rand()%num_servers];
             chunk_index[new_chunk][j] = new_server;
             send.mtype = chunk_index[current_chunk][j];
@@ -252,22 +251,20 @@ int cp (msg message, storage * file_index, pid_t * chunk_index[], pid_t d_server
         }
     }
 
-    printf("Done\n");
     add(file_index, new);
+    printf("Copy success\n");
 
     send.mtype = message.mbody.sender;
     send.mbody.req = STATUS_UPDATE;
     send.mbody.status = 0;
     strcpy(send.mbody.error, "Copy Success");
-    printf("Sending\n");
-    int stat = msgsnd(mqid, &send, MSGSIZE, 0);
-    printf("%d Copy success\n", stat);
+    msgsnd(mqid, &send, MSGSIZE, 0);
     return 0;
 }
 
 int mv (msg message, storage * file_index) {
 
-    printf("Starting copy\n");
+    printf("\nStarting move\n");
 
     msg send;
     send.mtype = message.mbody.sender;
@@ -307,7 +304,7 @@ int mv (msg message, storage * file_index) {
 
 int rm (msg message, storage * file_index, pid_t * chunk_index[]) {
 
-    printf("Starting remove\n");
+    printf("\nStarting remove\n");
 
     msg send;
     send.mtype = message.mbody.sender;
