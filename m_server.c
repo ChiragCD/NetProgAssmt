@@ -236,7 +236,6 @@ int cp (msg message, storage * file_index, pid_t * chunk_index[], pid_t d_server
 
     send.mbody.req = COPY_CHUNK;
     for(int i = 0; i < new->num_chunks; i++) {
-        printf("In outer loop\n");
         int current_chunk = f->chunk_ids[i];
         int new_chunk = name_server();
         new->chunk_ids[i] = new_chunk;

@@ -12,52 +12,9 @@ void get_file_name(int chunk_id, char * buffer) {
     strcpy(buffer, ".txt");
 }
 
-void clear (chunk_map * map) {
-    for(int i = 0; i < 16; i++) map->heads[i] = NULL;
-}
-
-int add(chunk_map * map, chunk * c) {
-    node * n = (node *) malloc(sizeof(node));
-    n->element = c;
-    n->next = map->heads[c->chunk_id%16];
-    map->heads[c->chunk_id%16] = n;
-    return 0;
-}
-
-chunk * get(chunk_map * map, int id) {
-    node * temp = map->heads[id%16];
-    while (temp) {
-        if(temp->element->chunk_id == id) return temp->element;
-        temp = temp->next;
-    }
-    return NULL;
-}
-
-chunk * rem(chunk_map * map, int id) {
-    node * pointer = map->heads[id%16];
-    if(!pointer) return NULL;
-    if(pointer->element->chunk_id == id) {
-        chunk * temp = pointer->element;
-        map->heads[id%16] = pointer->next;
-        free(pointer);
-        return temp;
-    }
-    while(pointer->next) {
-        if(pointer->next->element->chunk_id == id) {
-            chunk * temp = pointer->next->element;
-            node * freeable = pointer->next;
-            pointer->next = freeable->next;
-            free(freeable);
-            return temp;
-        }
-        pointer = pointer->next;
-    }
-    return NULL;
-}
-
-int store_chunk (msg message, chunk_map * map);
-int copy_chunk (msg message, chunk_map * map);
-int remove_chunk (msg message, chunk_map * map);
+int store_chunk (msg message);
+int copy_chunk (msg message);
+int remove_chunk (msg message);
 int command (msg message);
 int status_update (msg message);
 
@@ -78,9 +35,6 @@ void d_server() {
     msg recv_buf;
     msg send_buf;
 
-    chunk_map map;
-    clear(&map);
-
     send_buf.mbody.sender = getpid();
 
     send_buf.mtype = 1;
@@ -99,9 +53,9 @@ void d_server() {
             exit(1);
         }
         int status = 0;
-        if(recv_buf.mbody.req == STORE_CHUNK) status = store_chunk(recv_buf, &map);
-        if(recv_buf.mbody.req == COPY_CHUNK) status = copy_chunk(recv_buf, &map);
-        if(recv_buf.mbody.req == REMOVE_CHUNK) status = remove_chunk(recv_buf, &map);
+        if(recv_buf.mbody.req == STORE_CHUNK) status = store_chunk(recv_buf);
+        if(recv_buf.mbody.req == COPY_CHUNK) status = copy_chunk(recv_buf);
+        if(recv_buf.mbody.req == REMOVE_CHUNK) status = remove_chunk(recv_buf);
         if(recv_buf.mbody.req == COMMAND) status = command(recv_buf);
         if(recv_buf.mbody.req == STATUS_UPDATE) status = status_update(recv_buf);
     }
@@ -113,7 +67,7 @@ int main(int argc, char ** argv) {
     return 0;
 }
 
-int store_chunk (msg message, chunk_map * map) {
+int store_chunk (msg message) {
 
     printf("\nStarting store chunk %s\n", message.mbody.chunk.data);
 
@@ -134,20 +88,18 @@ int store_chunk (msg message, chunk_map * map) {
         return -1;
     }
 
-    chunk * c = (chunk *) malloc(sizeof(chunk));
-    c->chunk_id = chunk_id;
     write(fd, message.mbody.chunk.data, MSGSIZE/2);
 
     strcpy(send.mbody.error, "Store Success");
     send.mbody.status = 0;
     msgsnd(mqid, &send, MSGSIZE, 0);
-    printf("Stored chunk %d\n", c->chunk_id);
+    printf("Stored chunk %d\n", chunk_id);
 
     close(fd);
     return 0;
 }
 
-int copy_chunk (msg message, chunk_map * map) {
+int copy_chunk (msg message) {
 
     printf("\nStarting copy chunk\n");
 
@@ -178,7 +130,7 @@ int copy_chunk (msg message, chunk_map * map) {
     return 0;
 }
 
-int remove_chunk (msg message, chunk_map * map) {
+int remove_chunk (msg message) {
 
     printf("\nStarting remove chunk\n");
 
@@ -190,6 +142,7 @@ int remove_chunk (msg message, chunk_map * map) {
         printf("Chunk not present\n");
         return -1;
     }
+    close(fd);
     remove(buffer);
     printf("Successfully removed %d\n", chunk_id);
     return 0;

@@ -57,7 +57,7 @@ void client() {
                                break;
                        }
                        chunk c;
-                       lseek(fd,MSGSIZE/2*chunk_num,SEEK_SET);
+                       lseek(fd,MSGSIZE/2*(chunk_num-1),SEEK_SET);
                        int num_read;
                        if((num_read = read(fd,c.data,MSGSIZE/2)) == 0 )
                        {printf("Chunk number too large, file is not that big\n");close(fd);break;}
