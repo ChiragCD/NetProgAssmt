@@ -64,9 +64,4 @@ typedef struct storage {
     file * heads[16];
 } storage;
 
-typedef struct node {
-    struct node * next;
-    chunk * element;
-} node;
-
 #endif
