@@ -13,7 +13,7 @@ int hash_func(char str[]) {
     int hash = 5381;
     char c;
     while(c = *str) {
-        hash = ((hash << 5) + hash) + c;
+        hash = (((hash << 5) + hash) + c)%(1<<5);
         str++;
     }
     return hash;
@@ -24,7 +24,7 @@ void clear(storage * file_index) {
 }
 
 int check_if(storage * file_index, int hash) {
-    file * pointer = file_index->heads[hash%16];
+    file * pointer = (file_index->heads)[hash%16];
     while(pointer) {
         if(pointer->hash == hash) return 1;
         pointer = pointer->next;
@@ -34,15 +34,16 @@ int check_if(storage * file_index, int hash) {
 
 int add(storage * file_index, file * f) {
     if(check_if(file_index, f->hash)) return -1;
-    f->next = file_index->heads[f->hash%16];
-    file_index->heads[f->hash%16] = f;
+    f->next = (file_index->heads)[f->hash%16];
+    (file_index->heads)[f->hash%16] = f;
     return 0;
 }
 
 file * get(storage * file_index, int hash) {
-    file * temp = file_index->heads[hash%16];
+    file * temp = (file_index->heads)[hash%16];
     while (temp)
     {
+        //printf("Looking through hashmap at element with HASH:%d\n",temp->hash);
         if(temp->hash == hash) return temp;
         temp = temp->next;
     }
@@ -51,11 +52,11 @@ file * get(storage * file_index, int hash) {
 
 file * rem(storage * file_index, int hash) {
     file * temp;
-    file * pointer = file_index->heads[hash%16];
+    file * pointer = (file_index->heads)[hash%16];
     if(!pointer) return NULL;
     if(pointer->hash == hash) {
         temp = pointer;
-        file_index->heads[hash%16] = pointer->next;
+        (file_index->heads)[hash%16] = pointer->next;
         return temp;
     }
     while(pointer->next) {
@@ -139,6 +140,7 @@ int add_file (msg message, storage * file_index) {
     send.mbody.req = STATUS_UPDATE;
 
     file * new = (file *) malloc(sizeof(file));
+    //printf("Getting hash for:%s,%d\n",message.mbody.paths[0],hash_func(message.mbody.paths[0]));
     new->hash = hash_func(message.mbody.paths[0]);
     new->num_chunks = 0;
 
@@ -172,7 +174,7 @@ int add_chunk (msg message, storage * file_index, pid_t ** chunk_index, pid_t * 
     send.mtype = message.mbody.sender;
     send.mbody.sender = 1;
     send.mbody.req = CHUNK_DATA;
-
+    //printf("Getting hash for:%s,%d\n",message.mbody.paths[0],hash_func(message.mbody.paths[0]));
     int hash = hash_func(message.mbody.paths[0]);
     file * f = get(file_index, hash);
     if(!f) {
