@@ -18,6 +18,7 @@ int copy_chunk (msg message);
 int remove_chunk (msg message);
 int command (msg message);
 int status_update (msg message);
+int ls_data (msg message);
 
 void d_server() {
 
@@ -59,6 +60,8 @@ void d_server() {
         if(recv_buf.mbody.req == REMOVE_CHUNK) status = remove_chunk(recv_buf);
         if(recv_buf.mbody.req == COMMAND) status = command(recv_buf);
         if(recv_buf.mbody.req == STATUS_UPDATE) status = status_update(recv_buf);
+        if(recv_buf.mbody.req == LS_DATA) status = ls_data(recv_buf);
+
     }
 }
 
@@ -157,10 +160,38 @@ int remove_chunk (msg message) {
     return 0;
 }
 
+int ls_data (msg message) {
+    msg send_buf;
+    send_buf.mtype = message.mbody.sender;
+    send_buf.mbody.sender = getpid();
+    int arr[2];
+    pipe(arr);
+    int pid = getpid();
+    if(fork()){// parent
+       close(arr[1]); // close write end
+       send_buf.mbody.req = OUTPUT;
+       int n = read(arr[0],send_buf.mbody.chunk.data,MSGSIZE/2);
+       send_buf.mbody.chunk.data[n] = '\0';
+       close(arr[0]);
+       printf("read %d bytes %s\n",n,send_buf.mbody.chunk.data);
+       msgsnd(mqid,&send_buf,MSGSIZE,0);
+       return 0;
+    }
+    dup2(arr[1],1); //duplicate write end for child
+    close(arr[0]);  //close the read end for child
+    char dirname[100];
+    char tmp[100];
+    sprintf(tmp,"%d",pid);
+    strcpy(dirname,tmp);
+    execlp("ls","ls",dirname,NULL);
+    printf("SHOULDNT BE HERE\n");
+}
+
+int status_update (msg message) {
+    printf("\nReceived update from %d - %s\n", message.mbody.sender, message.mbody.error);
+    return 0;
+}
 int command (msg message) {
-
-    printf("\nStarting command\n");
-
     msg send_buf;
     send_buf.mtype = message.mbody.sender;
     send_buf.mbody.sender = getpid();
@@ -175,7 +206,7 @@ int command (msg message) {
         send_buf.mbody.status=-1;
         strcpy(send_buf.mbody.error,"COULDN'T OPEN FILE INSIDE D SERVER\n");
         msgsnd(mqid,&send_buf,MSGSIZE,0);
-        printf("COULDN'T OPEN\n");
+        printf("COULDN'T OPEN FILE %s\n",fname);
         return -1;
     }
     char actual_cmd[100];
@@ -195,24 +226,15 @@ int command (msg message) {
     pipe(arr);
     printf("About to execute %s on %s\n",cmd,fname);
     if(fork()){// parent
-    close(arr[1]); // close write end
-    send_buf.mbody.req = OUTPUT;
-    //fscanf(arr[0],"%s",send_buf.mbody.error);
-    int n = read(arr[0],send_buf.mbody.chunk.data,CHUNK_SIZE);
-    send_buf.mbody.error[n] = '\0';
-    printf("Successfully execd, output is:  %s .\n",send_buf.mbody.chunk.data);
-    msgsnd(mqid,&send_buf,MSGSIZE,0);
-    close(arr[0]);
+       close(arr[1]); // close write end
+       send_buf.mbody.req = OUTPUT;
+       int n = read(arr[0],send_buf.mbody.chunk.data,MSGSIZE/2);
+       send_buf.mbody.chunk.data[n] = '\0';
+       msgsnd(mqid,&send_buf,MSGSIZE,0);
     return 0;
     }
     dup2(arr[1],1); //duplicate write end for child
     close(arr[0]);  //close the read end for child
     dup2(fd,0);
     execvp(cmd,args);
-}
-
-
-int status_update (msg message) {
-    printf("\nReceived update from %d - %s\n", message.mbody.sender, message.mbody.error);
-    return 0;
 }
