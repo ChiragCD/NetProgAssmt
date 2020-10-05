@@ -86,6 +86,7 @@ int cp (msg message, storage * file_index, pid_t * chunk_index[], pid_t d_server
 int mv (msg message, storage * file_index);
 int rm (msg message, storage * file_index, pid_t * chunk_index[]);
 int status_update (msg message);
+int ls_file(msg message, storage * file_index, pid_t * chunk_index[]);
 
 void siginthandler(int status) {
     sigset_t set;
@@ -137,6 +138,8 @@ void m_server() {
         if(recv_buf.mbody.req == MV) status = mv(recv_buf, &file_index);
         if(recv_buf.mbody.req == RM) status = rm(recv_buf, &file_index, chunk_locs);
         if(recv_buf.mbody.req == STATUS_UPDATE) status = status_update(recv_buf);
+        if(recv_buf.mbody.req == LS_FILE) status = ls_file(recv_buf,&file_index,chunk_locs);
+
     }
 }
 
@@ -355,6 +358,33 @@ int status_update (msg message) {
     printf("\nReceived update from %d - %s\n", message.mbody.sender, message.mbody.error);
     return 0;
 }
+
+int ls_file(msg message, storage * file_index, pid_t * chunk_index[]){
+     msg send_buf;
+     send_buf.mtype = message.mbody.sender;
+     send_buf.mbody.sender = getpid();
+     int hash = hash_func(message.mbody.paths[0]);
+     file * f = get(file_index, hash);
+     send_buf.mbody.chunk.data[0] = '\0';
+     for(int i=0;i<(f->num_chunks);i++){
+        int chunk_id = f->chunk_ids[i];
+        strcat(send_buf.mbody.chunk.data,"Chunk ID: ");
+        char tmp[10];
+        sprintf(tmp,"%d",chunk_id);
+        strcat(send_buf.mbody.chunk.data,tmp);
+        strcat(send_buf.mbody.chunk.data," D_Server_Pids: ");
+        for(int j =0;j<3;j++){
+                char tmp2[20];
+                sprintf(tmp2,"%d",chunk_index[chunk_id][j]);
+                strcat(send_buf.mbody.chunk.data,tmp2);
+                strcat(send_buf.mbody.chunk.data,"  ");
+        }
+        strcat(send_buf.mbody.chunk.data,"\n");
+     }
+     msgsnd(mqid,&send_buf,MSGSIZE,0);
+     return 0;
+ }
+
 
 int main(int argc, char ** argv) {
     signal(SIGINT, siginthandler);
