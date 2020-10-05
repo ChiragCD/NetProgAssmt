@@ -30,7 +30,9 @@ typedef enum request {
     RM,
     REMOVE_CHUNK,
     COMMAND,
-    OUTPUT
+    OUTPUT,
+    LS_DATA,
+    LS_FILE
 } request;
 
 typedef struct chunk {
