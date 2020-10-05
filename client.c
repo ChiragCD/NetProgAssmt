@@ -21,7 +21,7 @@ void client() {
     msg send_buf,recv_buf;
     ssize_t temp, msgsize;
     for(;;){
-            printf("\nEnter the type of operation you would like to perform:\nADD FILE: 1 <file path>\nADD CHUNK: 2 <file path> <machine file path> <chunk number>\nCOPY: 3 <source> <destination>\nMOVE: 4 <source> <destination>\nREMOVE: 5 <file path>\nCOMMAND: 6 <command> <d_server_pid> <chunk name>\n");
+            printf("\nEnter the type of operation you would like to perform:\nADD FILE: 1 <file path>\nADD CHUNK: 2 <file path> <machine file path> <chunk number>\nCOPY: 3 <source> <destination>\nMOVE: 4 <source> <destination>\nREMOVE: 5 <file path>\nCOMMAND: 6 <command> <d_server_pid> <chunk name>\nLS DATA: 7 <d_server_pid>\nLS FILE: 8 <file path>\n");
             int choice = -1;
             choice = getc(stdin);
             choice -= '0';
@@ -133,7 +133,7 @@ void client() {
                        temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
                        msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
                        if(recv_buf.mbody.status==-1)
-                               printf("%s\n",recv_buf.mbody.chunk.data);
+                               printf("%s\n",recv_buf.mbody.error);
                        else{
                                printf("EXECUTED COMMAND SUCCESSFULLY\n");
                                printf("%s\n",recv_buf.mbody.chunk.data);
@@ -151,12 +151,29 @@ void client() {
                        else 
                                printf("FILE ADDED SUCCESSFULLY\n");
                        break;
-                case -49:
-                printf("njwefk\n");
-                    int tempkroqnnw = getc(stdin);
-                    printf("%d\n", tempkroqnnw);
-                break;
-
+                case 7:scanf("%s",d); // get the pid of the data server
+                getchar();
+                       send_buf.mtype=atoi(d);
+                       send_buf.mbody.sender = getpid();
+                       send_buf.mbody.req = LS_DATA;
+                       temp = msgsnd(mqid,&send_buf,msgsize,0);
+                       msgsize = msgrcv(mqid, &recv_buf, msgsize, getpid(), 0);
+                       if(recv_buf.mbody.status==-1)
+                               printf("%s\n",recv_buf.mbody.error);
+                       else {printf("the contents of the data server %s are: \n%s",d,recv_buf.mbody.chunk.data);} 
+                       break;
+                case 8:scanf("%s",s); // get the pid of the data server
+                getchar();
+                       send_buf.mtype=1;// sent to server
+                       strcpy(send_buf.mbody.paths[0],s);
+                       send_buf.mbody.sender = getpid();
+                       send_buf.mbody.req = LS_FILE;
+                       temp = msgsnd(mqid,&send_buf,msgsize,0);
+                       msgsize = msgrcv(mqid, &recv_buf, msgsize, getpid(), 0);
+                       if(recv_buf.mbody.status==-1)
+                               printf("%s\n",recv_buf.mbody.error);
+                       else {printf("the contents of the data server %s are: \n%s",d,recv_buf.mbody.chunk.data);} 
+                       break;
             }
     }
 }
