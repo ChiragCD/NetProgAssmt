@@ -13,7 +13,7 @@ int hash_func(char str[]) {
     int hash = 5381;
     char c;
     while(c = *str) {
-        hash = (((hash << 5) + hash) + c)%(1<<5);
+        hash = ((hash << 5) + hash) + c;
         str++;
     }
     return hash;
