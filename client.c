@@ -1,5 +1,6 @@
 #include "msg.h"
 
+static int CHUNK_SIZE;
 static int mqid;
 
 void siginthandler(int status) {
@@ -54,18 +55,18 @@ void client() {
                                break;
                        }
                        chunk c;
-                       lseek(fd,MSGSIZE/2*(chunk_num-1),SEEK_SET);
+                       lseek(fd,CHUNK_SIZE*(chunk_num-1),SEEK_SET);
                        int num_read;
-                       if((num_read = read(fd,c.data,MSGSIZE/2)) == 0 )
+                       if((num_read = read(fd,c.data,CHUNK_SIZE)) == 0 )
                        {printf("Chunk number too large, file is not that big\n");close(fd);break;}
                        close(fd);
-                       c.data[num_read] = '\0';
+                       if(num_read < CHUNK_SIZE) c.data[num_read] = '\0';
 
                        temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
                        msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
                        
                        if(recv_buf.mbody.status==-1)
-                       {printf("%d %s\n",recv_buf.mbody.status, recv_buf.mbody.error);close(fd);break;}\
+                       {printf("Add chunk error %d %s\n",recv_buf.mbody.status, recv_buf.mbody.error);close(fd);break;}\
                        for(int i=0;i<3;i++){
                                pid_t d_pid = recv_buf.mbody.addresses[i];
                                send_buf.mtype=d_pid;
@@ -132,10 +133,10 @@ void client() {
                        temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
                        msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
                        if(recv_buf.mbody.status==-1)
-                               printf("%s\n",recv_buf.mbody.error);
+                               printf("%s\n",recv_buf.mbody.chunk.data);
                        else{
                                printf("EXECUTED COMMAND SUCCESSFULLY\n");
-                               printf("%s\n",recv_buf.mbody.error);
+                               printf("%s\n",recv_buf.mbody.chunk.data);
                        }
                        break;
                 getchar();
@@ -161,6 +162,15 @@ void client() {
 }
 
 int main(int argc, char ** argv) {
+        if(argc < 2) {
+        printf("Usage - ./exec <CHUNK_SIZE>\nCHUNK_SIZE must be less than %d (bytes)\n", MSGSIZE/2);
+        return -1;
+    }
+    CHUNK_SIZE = atoi(argv[1]);
+    if(CHUNK_SIZE > 512) {
+        printf("Usage - ./exec <CHUNK_SIZE>\nCHUNK_SIZE must be less than %d (bytes)\n", MSGSIZE/2);
+        return -1;
+    }
     client();
     return 0;
 }

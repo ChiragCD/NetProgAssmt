@@ -1,5 +1,6 @@
 #include "msg.h"
 
+static int CHUNK_SIZE;
 static int mqid;
 static int chunk_counter;
 
@@ -140,7 +141,6 @@ int add_file (msg message, storage * file_index) {
     send.mbody.req = STATUS_UPDATE;
 
     file * new = (file *) malloc(sizeof(file));
-    //printf("Getting hash for:%s,%d\n",message.mbody.paths[0],hash_func(message.mbody.paths[0]));
     new->hash = hash_func(message.mbody.paths[0]);
     new->num_chunks = 0;
 
@@ -349,6 +349,15 @@ int status_update (msg message) {
 
 int main(int argc, char ** argv) {
     signal(SIGINT, siginthandler);
+    if(argc < 2) {
+        printf("Usage - ./exec <CHUNK_SIZE>\nCHUNK_SIZE must be less than %d (bytes)\n", MSGSIZE/2);
+        return -1;
+    }
+    CHUNK_SIZE = atoi(argv[1]);
+    if(CHUNK_SIZE > 512) {
+        printf("Usage - ./exec <CHUNK_SIZE>\nCHUNK_SIZE must be less than %d (bytes)\n", MSGSIZE/2);
+        return -1;
+    }
     m_server();
     return 0;
 }

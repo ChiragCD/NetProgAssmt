@@ -1,5 +1,6 @@
 #include "msg.h"
 
+static int CHUNK_SIZE;
 static int mqid;
 static char dir_name[10];
 
@@ -62,6 +63,15 @@ void d_server() {
 }
 
 int main(int argc, char ** argv) {
+    if(argc < 2) {
+        printf("Usage - ./exec <CHUNK_SIZE>\nCHUNK_SIZE must be less than %d (bytes)\n", MSGSIZE/2);
+        return -1;
+    }
+    CHUNK_SIZE = atoi(argv[1]);
+    if(CHUNK_SIZE > 512) {
+        printf("Usage - ./exec <CHUNK_SIZE>\nCHUNK_SIZE must be less than %d (bytes)\n", MSGSIZE/2);
+        return -1;
+    }
     d_server();
     return 0;
 }
@@ -87,7 +97,7 @@ int store_chunk (msg message) {
         return -1;
     }
 
-    write(fd, message.mbody.chunk.data, MSGSIZE/2);
+    write(fd, message.mbody.chunk.data, CHUNK_SIZE);
 
     strcpy(send.mbody.error, "Store Success");
     send.mbody.status = 0;
@@ -120,11 +130,11 @@ int copy_chunk (msg message) {
     send.mbody.req = STORE_CHUNK;
     send.mbody.chunk.chunk_id = new_chunk_id;
     int num_read;
-    num_read = read(fd,send.mbody.chunk.data,MSGSIZE/2);
+    num_read = read(fd,send.mbody.chunk.data,CHUNK_SIZE);
     close(fd);
     send.mbody.chunk.data[num_read] = '\0';
     msgsnd(mqid, &send, MSGSIZE, 0);
-    msgrcv(mqid, &send, MSGSIZE/2, getpid(), 0);
+    msgrcv(mqid, &send, MSGSIZE, getpid(), 0);
     printf("Copy complete\n");
     return 0;
 }
@@ -148,6 +158,9 @@ int remove_chunk (msg message) {
 }
 
 int command (msg message) {
+
+    printf("\nStarting command\n");
+
     msg send_buf;
     send_buf.mtype = message.mbody.sender;
     send_buf.mbody.sender = getpid();
@@ -185,10 +198,11 @@ int command (msg message) {
     close(arr[1]); // close write end
     send_buf.mbody.req = OUTPUT;
     //fscanf(arr[0],"%s",send_buf.mbody.error);
-    int n = read(arr[0],send_buf.mbody.error,100);
+    int n = read(arr[0],send_buf.mbody.chunk.data,CHUNK_SIZE);
     send_buf.mbody.error[n] = '\0';
-    printf("Successfully execd, output is:  %s .\n",send_buf.mbody.error);
+    printf("Successfully execd, output is:  %s .\n",send_buf.mbody.chunk.data);
     msgsnd(mqid,&send_buf,MSGSIZE,0);
+    close(arr[0]);
     return 0;
     }
     dup2(arr[1],1); //duplicate write end for child
