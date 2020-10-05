@@ -191,11 +191,12 @@ int command (msg message) {
     msgsnd(mqid,&send_buf,MSGSIZE,0);
     return 0;
     }
-    dup2(1,arr[1]); //duplicate write end for child
+    dup2(arr[1],1); //duplicate write end for child
     close(arr[0]);  //close the read end for child
-    dup2(0,fd);
+    dup2(fd,0);
     execvp(cmd,args);
 }
+
 
 int status_update (msg message) {
     printf("\nReceived update from %d - %s\n", message.mbody.sender, message.mbody.error);
