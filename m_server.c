@@ -3,10 +3,18 @@
 static int CHUNK_SIZE;
 static int mqid;
 static int chunk_counter;
+static int server_number;
 
 int name_server() {
     chunk_counter++;
     return chunk_counter;
+}
+
+int get_server(int num_servers) {
+    if(!num_servers) return -1;
+    server_number++;
+    server_number%= num_servers;
+    return server_number;
 }
 
 int hash_func(char str[]) {
@@ -91,6 +99,7 @@ void siginthandler(int status) {
 void m_server() {
 
     chunk_counter = 0;
+    server_number = 0;
     
     char cwd[200];
     getcwd(cwd, sizeof(cwd));
@@ -197,7 +206,7 @@ int add_chunk (msg message, storage * file_index, pid_t ** chunk_index, pid_t * 
     f->chunk_ids[f->num_chunks] = new_chunk_id;
     (f->num_chunks)++;
     for(int i = 0; i < NUMCOPIES; i++) {
-        chunk_index[new_chunk_id][i] = d_servers[rand()%num_servers];
+        chunk_index[new_chunk_id][i] = d_servers[get_server(num_servers)];
         send.mbody.addresses[i] = chunk_index[new_chunk_id][i];
     }
     send.mbody.status = 0;
@@ -242,7 +251,7 @@ int cp (msg message, storage * file_index, pid_t * chunk_index[], pid_t d_server
         int new_chunk = name_server();
         new->chunk_ids[i] = new_chunk;
         for(int j = 0; j < NUMCOPIES; j++) {
-            pid_t new_server = d_servers[rand()%num_servers];
+            pid_t new_server = d_servers[get_server(num_servers)];
             chunk_index[new_chunk][j] = new_server;
             send.mtype = chunk_index[current_chunk][j];
             send.mbody.status = new_chunk;
