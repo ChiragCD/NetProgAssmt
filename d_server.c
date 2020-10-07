@@ -220,13 +220,13 @@ int command (msg message) {
     while(token!=NULL){
         token=strtok(NULL," ");
         args[m++] = token;
-        printf("args[%d] is %s\n",m-1,token);
+        //printf("args[%d] is %s\n",m-1,token);
     }
     args[m-3] = NULL;// to remove the extra stuff like d pid and chunk id
     int arr[2];
-    printf("LISTING ALL ARGS TO CMD: %s\n",cmd);
-    for(int i=0;args[i];i++)
-            printf("%s\n",args[i]);
+//     printf("LISTING ALL ARGS TO CMD: %s\n",cmd);
+//     for(int i=0;args[i];i++)
+//             printf("%s\n",args[i]);
     pipe(arr);
     printf("About to execute %s on %s\n",cmd,fname);
     if(fork()){// parent
