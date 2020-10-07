@@ -122,14 +122,35 @@ void client() {
                        else 
                                printf("FILE REMOVED SUCCESSFULLY\n");
                        break;
-                case 6:scanf("%s",cmd);// command to be executed on data server
-                       scanf("%s",d);  // d_server pid in string format 
-                       scanf("%s",s);  // chunk id taken in string format
+                case 6://scanf("%s",cmd);// command to be executed on data server
+                       //scanf("%s",d);  // d_server pid in string format 
+                       //scanf("%s",s);  // chunk id taken in string format
+                       ;
+                       char full_line[200],d[100],s[100];
+                       gets(full_line);
+                       int first_non_zero=0;
+                       while(full_line[first_non_zero] == ' ')
+                               first_non_zero++;
+                       strcpy(send_buf.mbody.chunk.data,full_line+first_non_zero);
+                       strcpy(full_line,full_line+first_non_zero);
+                       char* token = strtok(full_line," ");
+                       token = strtok(NULL," ");
+                       char* args[10];
+                       int num_args=0;
+                       while(token){
+                           args[num_args++] = malloc(strlen(token)+1);
+                           strcpy(args[num_args-1],token);
+                           token = strtok(NULL," ");
+                       }
+                       args[num_args] = NULL;
+                       strcpy(d,args[num_args-2]);
+                       strcpy(s,args[num_args-1]);
+
                        send_buf.mtype = atoi(d);
                        send_buf.mbody.req = COMMAND;
                        send_buf.mbody.sender = getpid();
                        strcpy(send_buf.mbody.paths[0],s);
-                       strcpy(send_buf.mbody.paths[1],cmd);
+                       //strcpy(send_buf.mbody.paths[1],cmd);
                        temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
                        msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
                        if(recv_buf.mbody.status==-1)
@@ -151,6 +172,7 @@ void client() {
                        else 
                                printf("FILE ADDED SUCCESSFULLY\n");
                        break;
+
                 case 7:scanf("%s",d); // get the pid of the data server
                 getchar();
                        send_buf.mtype=atoi(d);
