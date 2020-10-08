@@ -250,4 +250,3 @@ int command (msg message) {
     dup2(fd,0);
     execvp(cmd,args);
 }
-
