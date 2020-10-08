@@ -370,6 +370,7 @@ int ls_file(msg message, storage * file_index, pid_t * chunk_index[]){
      int hash = hash_func(message.mbody.paths[0]);
      file * f = get(file_index, hash);
      send_buf.mbody.chunk.data[0] = '\0';
+     send_buf.mbody.status=0;
      if(f == NULL){ // couldn't find the file
              strcpy(send_buf.mbody.chunk.data,"File does not exist\n");
              strcpy(send_buf.mbody.error,"File does not exist\n");
