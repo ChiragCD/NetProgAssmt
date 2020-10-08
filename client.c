@@ -194,7 +194,7 @@ void client() {
                        msgsize = msgrcv(mqid, &recv_buf, msgsize, getpid(), 0);
                        if(recv_buf.mbody.status==-1)
                                printf("%s\n",recv_buf.mbody.error);
-                       else {printf("the contents of the data server %s are: \n%s",d,recv_buf.mbody.chunk.data);} 
+                       else {printf("the contents of the file %s are: \n%s",s,recv_buf.mbody.chunk.data);} 
                        break;
             }
     }
