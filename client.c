@@ -178,8 +178,8 @@ void client() {
                        send_buf.mtype=atoi(d);
                        send_buf.mbody.sender = getpid();
                        send_buf.mbody.req = LS_DATA;
-                       temp = msgsnd(mqid,&send_buf,msgsize,0);
-                       msgsize = msgrcv(mqid, &recv_buf, msgsize, getpid(), 0);
+                       temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
+                       msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
                        if(recv_buf.mbody.status==-1)
                                printf("%s\n",recv_buf.mbody.error);
                        else {printf("the contents of the data server %s are: \n%s",d,recv_buf.mbody.chunk.data);} 
@@ -190,8 +190,8 @@ void client() {
                        strcpy(send_buf.mbody.paths[0],s);
                        send_buf.mbody.sender = getpid();
                        send_buf.mbody.req = LS_FILE;
-                       temp = msgsnd(mqid,&send_buf,msgsize,0);
-                       msgsize = msgrcv(mqid, &recv_buf, msgsize, getpid(), 0);
+                       temp = msgsnd(mqid,&send_buf,MSGSIZE,0);
+                       msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, getpid(), 0);
                        if(recv_buf.mbody.status==-1)
                                printf("%s\n",recv_buf.mbody.error);
                        else {printf("the contents of the file %s are: \n%s",s,recv_buf.mbody.chunk.data);} 
