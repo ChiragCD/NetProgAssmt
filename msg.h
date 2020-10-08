@@ -37,7 +37,7 @@ typedef enum request {
 
 typedef struct chunk {
     int chunk_id;
-    char data[MSGSIZE/2];
+    char data[612];
 } chunk;
 
 typedef struct {

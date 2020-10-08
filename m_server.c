@@ -122,7 +122,8 @@ void m_server() {
 
     int num_d_servers = 0;
     pid_t * d_servers = (pid_t *) malloc(1024 * sizeof(pid_t));
-
+    
+    int status = 0;
     for(;;) {
         ssize_t msgsize = msgrcv(mqid, &recv_buf, MSGSIZE, 1, 0);
         if(msgsize == -1) {
@@ -130,7 +131,6 @@ void m_server() {
             raise(SIGINT);
             exit(1);
         }
-        int status = 0;
         if(recv_buf.mbody.req == ADD_FILE) status = add_file(recv_buf, &file_index);
         if(recv_buf.mbody.req == NOTIFY_EXISTENCE) status = notify_existence(recv_buf, d_servers, &num_d_servers);
         if(recv_buf.mbody.req == ADD_CHUNK) status = add_chunk(recv_buf, &file_index, chunk_locs, d_servers, num_d_servers);
@@ -139,7 +139,6 @@ void m_server() {
         if(recv_buf.mbody.req == RM) status = rm(recv_buf, &file_index, chunk_locs);
         if(recv_buf.mbody.req == STATUS_UPDATE) status = status_update(recv_buf);
         if(recv_buf.mbody.req == LS_FILE) status = ls_file(recv_buf,&file_index,chunk_locs);
-
     }
 }
 
@@ -223,6 +222,7 @@ int cp (msg message, storage * file_index, pid_t * chunk_index[], pid_t d_server
 
     printf("\nStarting copy\n");
     msg send;
+    msg temp;
     send.mtype = message.mbody.sender;
     send.mbody.sender = 1;
     send.mbody.req = STATUS_UPDATE;
@@ -261,6 +261,10 @@ int cp (msg message, storage * file_index, pid_t * chunk_index[], pid_t d_server
             send.mbody.addresses[0] = new_server;
             send.mbody.chunk.chunk_id = current_chunk;
             msgsnd(mqid, &send, MSGSIZE, 0);
+            msgrcv(mqid, &temp, MSGSIZE, 1, 0);
+            if(temp.mbody.status == -1){
+                printf("[Warning] - %s\n", temp.mbody.error);
+            }
         }
     }
 
@@ -268,8 +272,8 @@ int cp (msg message, storage * file_index, pid_t * chunk_index[], pid_t d_server
     printf("Copy success\n");
 
     send.mtype = message.mbody.sender;
-    send.mbody.req = STATUS_UPDATE;
     send.mbody.status = 0;
+    send.mbody.req = STATUS_UPDATE;
     strcpy(send.mbody.error, "Copy Success");
     msgsnd(mqid, &send, MSGSIZE, 0);
     return 0;

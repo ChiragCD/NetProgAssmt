@@ -93,37 +93,43 @@ int store_chunk (msg message) {
     get_file_name(chunk_id, buffer);
     int fd = open(buffer, O_CREAT|O_EXCL|O_RDWR, 0777);
     if(fd == -1) {
-        send.mbody.status = -1;
-        strcpy(send.mbody.error, "Chunk already present\n");
-        msgsnd(mqid, &send, MSGSIZE, 0);
         printf("Store chunk error - Chunk %d already present\n", chunk_id);
+        send.mbody.status = -1;
+        strcpy(send.mbody.error, "Store error - Chunk already present\n");
+        msgsnd(mqid, &send, MSGSIZE, 0);
         return -1;
     }
 
     write(fd, message.mbody.chunk.data, CHUNK_SIZE);
+    close(fd);
 
+    printf("Stored chunk %d\n", chunk_id);
     strcpy(send.mbody.error, "Store Success");
     send.mbody.status = 0;
     msgsnd(mqid, &send, MSGSIZE, 0);
-    printf("Stored chunk %d\n", chunk_id);
-
-    close(fd);
     return 0;
 }
 
 int copy_chunk (msg message) {
 
-    printf("\nStarting copy chunk\n");
-
     int chunk_id = message.mbody.chunk.chunk_id;
     int new_chunk_id = message.mbody.status;
     pid_t new_server = message.mbody.addresses[0];
+    printf("\nStarting copy chunk %d to %d\n", chunk_id, new_chunk_id);
+
+    msg update;
+    update.mtype = 1;
+    update.mbody.sender = getpid();
+    update.mbody.req = STATUS_UPDATE;
 
     char buffer[100];
     get_file_name(chunk_id, buffer);
     int fd = open(buffer, O_RDONLY, 0777);
     if(fd == -1) {
         printf("Not found\n");
+        update.mbody.status = -1;
+        strcpy(update.mbody.error, "Copy error - Not found");
+        msgsnd(mqid, &update, MSGSIZE, 0);
         return -1;
     }
 
@@ -137,8 +143,10 @@ int copy_chunk (msg message) {
     close(fd);
     send.mbody.chunk.data[num_read] = '\0';
     msgsnd(mqid, &send, MSGSIZE, 0);
-    msgrcv(mqid, &send, MSGSIZE, getpid(), 0);
     printf("Copy complete\n");
+    update.mbody.status = 0;
+    strcpy(update.mbody.error, "Copy chunk success");
+    msgsnd(mqid, &update, MSGSIZE, 0);
     return 0;
 }
 
